@@ -7,6 +7,8 @@
 
 namespace Marreira\MCP_Builders;
 
+use Marreira\MCP_Builders\Security\Audit_Log;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -58,12 +60,13 @@ final class Plugin {
 			dirname( MMCB_PLUGIN_BASENAME ) . '/languages'
 		);
 
+		// Audit log (F1): hook de rest_post_dispatch + cron de retencao.
+		Audit_Log::init();
+
 		// Os subsistemas abaixo sao ligados nas fases seguintes:
-		// - Auth\Rest_Guard / Auth\Token_Manager (F1)
-		// - Security\Audit_Log                    (F1)
-		// - MCP\MCP_Server                         (F3)
-		// - CLI\Rest_Controller                    (F5)
-		// - CLI\WP_CLI_Commands                    (F6)
-		// - Admin\Admin                            (F1/F7)
+		// - MCP\MCP_Server        (F3)  servidor MCP + rotas /mcp, /skill, /describe
+		// - CLI\Rest_Controller   (F5)  rotas /cli/*
+		// - CLI\WP_CLI_Commands   (F6)  comandos wp mmcb ...
+		// - Admin\Admin           (F7)  painel SPA (onboarding, tokens, logs, settings)
 	}
 }

@@ -128,6 +128,12 @@ class Activator {
 	 * @return void
 	 */
 	public static function deactivate() {
+		// Limpa o cron de retencao de logs.
+		$timestamp = wp_next_scheduled( 'mmcb_daily_purge' );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, 'mmcb_daily_purge' );
+		}
+
 		flush_rewrite_rules();
 	}
 
