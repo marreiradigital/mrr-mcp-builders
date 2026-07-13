@@ -73,6 +73,10 @@
   }
   .tb-btn:hover{border-color:var(--accent)}
   .nav-toggle{display:none}
+  .gh-star{display:inline-flex; align-items:center; min-height:28px}
+  .badges{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; align-items:center}
+  .badges a{display:inline-flex; line-height:0}
+  .badges img{height:20px; display:block; border-radius:4px}
 
   /* ---- Shell ---- */
   .shell{display:grid; grid-template-columns:260px minmax(0,1fr); gap:0; align-items:start}
@@ -176,7 +180,7 @@
   </div>
   <span class="ver">v1.0.0</span>
   <span class="spacer"></span>
-  <a class="tb-btn" href="https://github.com/marreiradigital/mrr-mcp-builders" target="_blank" rel="noopener">GitHub</a>
+  <span class="gh-star"><a class="github-button" href="https://github.com/marreiradigital/mrr-mcp-builders" data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Marcar marreiradigital/mrr-mcp-builders com estrela no GitHub">Star</a></span>
   <button class="tb-btn" id="themeToggle" aria-label="Alternar tema">◐</button>
 </header>
 
@@ -209,6 +213,13 @@
         <div class="hero-actions">
           <a class="btn primary" href="#instalacao">Instalar &amp; conectar</a>
           <a class="btn ghost" href="#batch">Ver o run_batch</a>
+        </div>
+        <div class="badges">
+          <a href="https://github.com/marreiradigital/mrr-mcp-builders/stargazers" target="_blank" rel="noopener"><img alt="Estrelas no GitHub" src="https://img.shields.io/github/stars/marreiradigital/mrr-mcp-builders?style=flat&logo=github&label=estrelas&color=e2680d"></a>
+          <a href="https://github.com/marreiradigital/mrr-mcp-builders/forks" target="_blank" rel="noopener"><img alt="Forks no GitHub" src="https://img.shields.io/github/forks/marreiradigital/mrr-mcp-builders?style=flat&logo=github&label=forks&color=6b7280"></a>
+          <a href="https://github.com/marreiradigital/mrr-mcp-builders/issues" target="_blank" rel="noopener"><img alt="Issues abertas" src="https://img.shields.io/github/issues/marreiradigital/mrr-mcp-builders?style=flat&logo=github&label=issues&color=2b6cb0"></a>
+          <a href="https://github.com/marreiradigital/mrr-mcp-builders/blob/main/marreira-mcp-builders/marreira-mcp-builders.php" target="_blank" rel="noopener"><img alt="Licenca GPL-2.0" src="https://img.shields.io/badge/licen%C3%A7a-GPL--2.0-2f9e5b?style=flat"></a>
+          <a href="https://github.com/marreiradigital/mrr-mcp-builders/releases" target="_blank" rel="noopener"><img alt="Versao 1.0.0" src="https://img.shields.io/badge/vers%C3%A3o-1.0.0-e2680d?style=flat"></a>
         </div>
       </div>
 
@@ -424,5 +435,7 @@ wp mmcb token create "agente-ia" --abilities=builder --expires=30</pre></div>
   Object.keys(map).forEach(function(id){ obs.observe(document.getElementById(id)); });
 })();
 </script>
+<!-- Widget oficial do GitHub (botao de estrela com contador). Requer internet; roda no GitHub Pages. -->
+<script async defer src="https://buttons.github.io/buttons.js"></script>
 </body>
 </html>
