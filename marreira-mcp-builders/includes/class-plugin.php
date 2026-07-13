@@ -9,6 +9,7 @@ namespace Marreira\MCP_Builders;
 
 use Marreira\MCP_Builders\Security\Audit_Log;
 use Marreira\MCP_Builders\MCP\MCP_Server;
+use Marreira\MCP_Builders\CLI\WP_CLI_Commands;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -67,9 +68,13 @@ final class Plugin {
 		// Servidor MCP (F3): rotas /mcp, /skill, /describe + dispatch JSON-RPC.
 		( new MCP_Server() )->register_hooks();
 
+		// WP-CLI local (F6): comandos wp mmcb ... para o dono operar no terminal.
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			WP_CLI_Commands::register();
+		}
+
 		// Os subsistemas abaixo sao ligados nas fases seguintes:
 		// - CLI\Rest_Controller   (F5)  rotas /cli/*
-		// - CLI\WP_CLI_Commands   (F6)  comandos wp mmcb ...
 		// - Admin\Admin           (F7)  painel SPA (onboarding, tokens, logs, settings)
 	}
 }
