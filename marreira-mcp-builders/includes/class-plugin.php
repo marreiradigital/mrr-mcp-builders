@@ -10,6 +10,8 @@ namespace Marreira\MCP_Builders;
 use Marreira\MCP_Builders\Security\Audit_Log;
 use Marreira\MCP_Builders\MCP\MCP_Server;
 use Marreira\MCP_Builders\CLI\WP_CLI_Commands;
+use Marreira\MCP_Builders\CLI\Rest_Controller;
+use Marreira\MCP_Builders\CLI\Snippets;
 use Marreira\MCP_Builders\Admin\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -69,6 +71,13 @@ final class Plugin {
 		// Servidor MCP (F3): rotas /mcp, /skill, /describe + dispatch JSON-RPC.
 		( new MCP_Server() )->register_hooks();
 
+		// CLI geral de WordPress (F5): rotas /cli/* (desligadas por padrao nas
+		// settings; as rotas existem mas os handlers barram com 403 ate ligar).
+		Rest_Controller::register_hooks();
+
+		// Snippets PHP: executa os ativos (criacao e gated por ability + flag).
+		Snippets::init();
+
 		// WP-CLI local (F6): comandos wp mmcb ... para o dono operar no terminal.
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			WP_CLI_Commands::register();
@@ -78,8 +87,5 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new Admin() )->register_hooks();
 		}
-
-		// Ligado na fase seguinte:
-		// - CLI\Rest_Controller   (F5)  rotas /cli/*
 	}
 }
