@@ -236,6 +236,22 @@
           <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h6l2-4 3 8 2-4h3"/></svg></div><h3>Uma requisição só</h3><p><code>run_batch</code> aplica várias mudanças num único POST — evita bloqueios por excesso de chamadas.</p></div>
           <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></div><h3>Adapta à sua IA</h3><p>Modo premium ou econômico: skill enxuta, mapa compacto e limites menores quando o contexto é caro.</p></div>
         </div>
+
+        <h3>Novo × antigo</h3>
+        <p class="muted">Antes eram dois plugins separados, cada um mais simples. O unificado entrega mais poder e segurança para os dois builders de uma vez.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Recurso</th><th>Antes (2 plugins)</th><th>Agora (unificado 1.0.0)</th></tr></thead>
+          <tbody>
+            <tr><td>Plugins</td><td class="muted">Um pro Bricks, outro pro Elementor</td><td>Um só — escolhe o builder na instalação e troca depois</td></tr>
+            <tr><td>Aplicar várias mudanças</td><td class="muted">Vários POSTs seguidos (risco de o host bloquear)</td><td><code>run_batch</code>: tudo numa requisição</td></tr>
+            <tr><td>Tokens</td><td class="muted">Um token único (SHA-256)</td><td>Multi-token com escopos, HMAC e expiração</td></tr>
+            <tr><td>CLI de WordPress</td><td class="muted">—</td><td>Completo (plugins, temas, banco, arquivos, exec) com trava dupla, desligado por padrão</td></tr>
+            <tr><td>Modo de IA</td><td class="muted">—</td><td>Premium × econômico (poupa contexto de IA grátis/barata)</td></tr>
+            <tr><td>Auditoria</td><td class="muted">—</td><td>Audit log com dados sensíveis mascarados</td></tr>
+            <tr><td>Segurança de rede</td><td class="muted">Rate limit básico</td><td>Throttle por IP, IP allowlist, revalidação do admin dono</td></tr>
+            <tr><td>Terminal (WP-CLI)</td><td class="muted">—</td><td><code>wp mmcb …</code></td></tr>
+          </tbody>
+        </table></div>
       </section>
 
       <section id="arquitetura">
