@@ -10,6 +10,7 @@ namespace Marreira\MCP_Builders;
 use Marreira\MCP_Builders\Security\Audit_Log;
 use Marreira\MCP_Builders\MCP\MCP_Server;
 use Marreira\MCP_Builders\CLI\WP_CLI_Commands;
+use Marreira\MCP_Builders\Admin\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -73,8 +74,12 @@ final class Plugin {
 			WP_CLI_Commands::register();
 		}
 
-		// Os subsistemas abaixo sao ligados nas fases seguintes:
+		// Painel admin (F7): SPA de onboarding, tokens, logs e configuracoes.
+		if ( is_admin() ) {
+			( new Admin() )->register_hooks();
+		}
+
+		// Ligado na fase seguinte:
 		// - CLI\Rest_Controller   (F5)  rotas /cli/*
-		// - Admin\Admin           (F7)  painel SPA (onboarding, tokens, logs, settings)
 	}
 }
