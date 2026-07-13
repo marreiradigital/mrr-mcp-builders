@@ -1,0 +1,20 @@
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.idea/
+.vscode/
+
+# Logs e temporarios
+*.log
+*.tmp
+
+# Dependencias (nao usamos gerenciador de pacotes; plugin autocontido)
+node_modules/
+vendor/
+
+# Segredos / ambiente
+.env
+.env.*
