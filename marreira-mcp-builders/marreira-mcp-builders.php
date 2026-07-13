@@ -5,7 +5,7 @@
  * Description:        Servidor MCP (Model Context Protocol) unificado para criar e editar paginas e templates do Bricks Builder OU do Elementor via IA, com CLI completo (estilo WP-CLI), multi-token com escopos, batch de uma requisicao, audit log e endpoints ocultos do indice publico do REST.
  * Version:           1.0.0
  * Requires at least: 6.4
- * Requires PHP:      7.4
+ * Requires PHP:      8.0
  * Author:            Paulo Marreira
  * Author URI:        https://marreiradigital.com.br
  * License:           GPL-2.0-or-later

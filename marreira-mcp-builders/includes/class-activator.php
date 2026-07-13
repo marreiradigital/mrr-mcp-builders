@@ -100,6 +100,7 @@ class Activator {
 			// Rede e retencao.
 			'allowed_ips'        => '',       // Vazio = qualquer IP (respeita throttle).
 			'log_retention_days' => 90,
+			'db_blacklist'       => '',       // Tabelas ocultas do explorador de DB.
 		);
 	}
 
@@ -194,10 +195,13 @@ class Activator {
 		$sql_snippets = "CREATE TABLE {$snippets} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(191) NOT NULL DEFAULT '',
+			description longtext NULL,
 			code longtext NULL,
 			scope varchar(20) NOT NULL DEFAULT 'global',
 			active tinyint(1) NOT NULL DEFAULT 0,
 			priority int(11) NOT NULL DEFAULT 10,
+			created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+			updated_by bigint(20) unsigned NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL,
 			updated_at datetime NULL,
 			PRIMARY KEY  (id),
