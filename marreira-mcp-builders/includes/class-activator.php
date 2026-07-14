@@ -39,7 +39,7 @@ class Activator {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '1';
+	const DB_VERSION = '2';
 
 	/**
 	 * Nome completo da tabela de tokens.
@@ -72,6 +72,26 @@ class Activator {
 	}
 
 	/**
+	 * Nome completo da tabela de clients OAuth (Dynamic Client Registration).
+	 *
+	 * @return string
+	 */
+	public static function table_oauth_clients() {
+		global $wpdb;
+		return $wpdb->prefix . MMCB_TABLE_OAUTH_CLIENTS;
+	}
+
+	/**
+	 * Nome completo da tabela de authorization codes OAuth.
+	 *
+	 * @return string
+	 */
+	public static function table_oauth_codes() {
+		global $wpdb;
+		return $wpdb->prefix . MMCB_TABLE_OAUTH_CODES;
+	}
+
+	/**
 	 * Defaults seguros das configuracoes.
 	 *
 	 * @return array
@@ -96,6 +116,14 @@ class Activator {
 			'allow_php_exec'     => false,
 			'allow_db_query'     => false,
 			'allow_file_write'   => false,
+
+			// Conector OAuth para IAs externas (Claude.ai / ChatGPT).
+			// enable_oauth LIGADO: expoe o discovery e o fluxo OAuth. A seguranca
+			// vem do consentimento humano (o admin aprova cada client) — nao do
+			// desligamento. oauth_auto_approve DESLIGADO: clients registrados via
+			// DCR ficam 'pending' ate o admin aprovar no painel.
+			'enable_oauth'       => true,
+			'oauth_auto_approve' => false,
 
 			// Rede e retencao.
 			'allowed_ips'        => '',       // Vazio = qualquer IP (respeita throttle).
@@ -153,7 +181,10 @@ class Activator {
 		$logs            = self::table_logs();
 		$snippets        = self::table_snippets();
 
-		// Tabela de tokens (multi-token com escopos).
+		// Tabela de tokens (multi-token com escopos). As colunas source/refresh_hash/
+		// oauth_client_id suportam os access tokens emitidos pelo fluxo OAuth
+		// (source='oauth'); tokens estaticos ficam com source='static'. dbDelta
+		// adiciona as colunas novas em bancos ja existentes.
 		$sql_tokens = "CREATE TABLE {$tokens} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(191) NOT NULL DEFAULT '',
@@ -161,6 +192,10 @@ class Activator {
 			prefix varchar(32) NOT NULL DEFAULT '',
 			abilities longtext NULL,
 			status varchar(20) NOT NULL DEFAULT 'active',
+			source varchar(20) NOT NULL DEFAULT 'static',
+			refresh_hash char(64) NULL,
+			refresh_expires_at datetime NULL,
+			oauth_client_id varchar(255) NULL,
 			created_by bigint(20) unsigned NOT NULL DEFAULT 0,
 			expires_at datetime NULL,
 			last_used_at datetime NULL,
@@ -168,7 +203,9 @@ class Activator {
 			created_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			KEY token_hash (token_hash),
-			KEY status (status)
+			KEY status (status),
+			KEY refresh_hash (refresh_hash),
+			KEY oauth_client_id (oauth_client_id)
 		) {$charset_collate};";
 
 		// Tabela de audit log.
@@ -208,9 +245,51 @@ class Activator {
 			KEY active (active)
 		) {$charset_collate};";
 
+		// Tabela de clients OAuth (Dynamic Client Registration, RFC 7591). Clients
+		// nascem 'pending' e so operam apos aprovacao do admin (status 'approved').
+		$oauth_clients = self::table_oauth_clients();
+		$sql_oauth_clients = "CREATE TABLE {$oauth_clients} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			client_id varchar(255) NOT NULL,
+			client_name varchar(255) NOT NULL DEFAULT '',
+			redirect_uris longtext NULL,
+			status varchar(20) NOT NULL DEFAULT 'pending',
+			reg_ip varchar(64) NOT NULL DEFAULT '',
+			reg_token_hash char(64) NULL,
+			created_at datetime NOT NULL,
+			approved_at datetime NULL,
+			approved_by bigint(20) unsigned NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY client_id (client_id),
+			KEY status (status)
+		) {$charset_collate};";
+
+		// Tabela de authorization codes OAuth. Codes guardados so como hash HMAC,
+		// single-use (used_at) e com TTL curto (expires_at ~60s).
+		$oauth_codes = self::table_oauth_codes();
+		$sql_oauth_codes = "CREATE TABLE {$oauth_codes} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			code_hash char(64) NOT NULL,
+			client_id varchar(255) NOT NULL,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			scope varchar(1000) NOT NULL DEFAULT '',
+			redirect_uri varchar(2000) NOT NULL DEFAULT '',
+			code_challenge varchar(128) NOT NULL DEFAULT '',
+			code_challenge_method varchar(10) NOT NULL DEFAULT 'S256',
+			expires_at datetime NOT NULL,
+			used_at datetime NULL,
+			created_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY code_hash (code_hash),
+			KEY client_id (client_id),
+			KEY expires_at (expires_at)
+		) {$charset_collate};";
+
 		dbDelta( $sql_tokens );
 		dbDelta( $sql_logs );
 		dbDelta( $sql_snippets );
+		dbDelta( $sql_oauth_clients );
+		dbDelta( $sql_oauth_codes );
 	}
 
 	/**

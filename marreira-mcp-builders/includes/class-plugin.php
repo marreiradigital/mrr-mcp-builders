@@ -9,6 +9,7 @@ namespace Marreira\MCP_Builders;
 
 use Marreira\MCP_Builders\Security\Audit_Log;
 use Marreira\MCP_Builders\MCP\MCP_Server;
+use Marreira\MCP_Builders\OAuth\Router as OAuth_Router;
 use Marreira\MCP_Builders\CLI\WP_CLI_Commands;
 use Marreira\MCP_Builders\CLI\Rest_Controller;
 use Marreira\MCP_Builders\CLI\Snippets;
@@ -70,6 +71,11 @@ final class Plugin {
 
 		// Servidor MCP (F3): rotas /mcp, /skill, /describe + dispatch JSON-RPC.
 		( new MCP_Server() )->register_hooks();
+
+		// Conector OAuth para IAs externas (Claude.ai / ChatGPT): endpoints de
+		// discovery, registro (DCR), consentimento e token servidos na RAIZ do
+		// site (fora do /wp-json), interceptados no hook init.
+		OAuth_Router::init();
 
 		// CLI geral de WordPress (F5): rotas /cli/* (desligadas por padrao nas
 		// settings; as rotas existem mas os handlers barram com 403 ate ligar).

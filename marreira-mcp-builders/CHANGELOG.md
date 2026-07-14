@@ -27,6 +27,29 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.1.0] - 2026-07-14
+
+### Adicionado
+
+- **Discovery OAuth e Dynamic Client Registration** (segunda etapa da conexão
+  como conector de IA externo). Servidos na **raiz do site** (fora do
+  `/wp-json/`), interceptados no hook `init` por `OAuth\Router`:
+  - `GET /.well-known/oauth-protected-resource` (RFC 9728) — aponta o recurso
+    protegido (endpoint MCP) e o Authorization Server.
+  - `GET /.well-known/oauth-authorization-server` (RFC 8414) — anuncia
+    `authorization_endpoint`, `token_endpoint`, `registration_endpoint`,
+    `code_challenge_methods_supported: ["S256"]` e os escopos.
+  - `POST /marreira-mcp-oauth/register` (RFC 7591) — Dynamic Client Registration.
+    Clients nascem `pending` e só operam após aprovação do admin (salvo
+    `oauth_auto_approve`); registro protegido por rate limit por IP (5/hora).
+  - Preflight CORS (`OPTIONS`) e headers CORS nos endpoints públicos de discovery.
+- **Novas tabelas** `mmcb_oauth_clients` e `mmcb_oauth_codes`, e novas colunas em
+  `mmcb_tokens` (`source`, `refresh_hash`, `refresh_expires_at`,
+  `oauth_client_id`) para os access tokens emitidos via OAuth. Migração
+  automática no boot (`DB_VERSION` `1` → `2`).
+- **Novas configurações** `enable_oauth` (ligada — expõe o fluxo; a segurança vem
+  do consentimento humano) e `oauth_auto_approve` (desligada).
+
 ## [1.0.2] - 2026-07-14
 
 ### Adicionado
