@@ -60,7 +60,7 @@ class Code_Manager {
 				'scope'                 => substr( (string) $scope, 0, 1000 ),
 				'redirect_uri'          => substr( (string) $redirect_uri, 0, 2000 ),
 				'code_challenge'        => substr( (string) $code_challenge, 0, 128 ),
-				'code_challenge_method' => 'S256' === $method ? 'S256' : 'S256',
+				'code_challenge_method' => 'S256',
 				'expires_at'            => gmdate( 'Y-m-d H:i:s', time() + self::TTL ),
 				'used_at'               => null,
 				'created_at'            => gmdate( 'Y-m-d H:i:s' ),
@@ -74,12 +74,17 @@ class Code_Manager {
 	/**
 	 * Valida e consome (single-use) um authorization code.
 	 *
-	 * @param string $code_plain   Code recebido.
-	 * @param string $client_id    Client que troca.
-	 * @param string $redirect_uri Redirect enviado na troca.
+	 * A verificacao PKCE acontece ANTES de marcar o code como usado: se o
+	 * code_verifier estiver errado, o code NAO e queimado (o cliente legitimo
+	 * ainda pode trocar). So depois de tudo validado o UPDATE atomico marca o uso.
+	 *
+	 * @param string $code_plain    Code recebido.
+	 * @param string $client_id     Client que troca.
+	 * @param string $redirect_uri  Redirect enviado na troca.
+	 * @param string $code_verifier Verifier PKCE (S256).
 	 * @return array|WP_Error Linha do code consumido ou erro invalid_grant.
 	 */
-	public static function consume( $code_plain, $client_id, $redirect_uri ) {
+	public static function consume( $code_plain, $client_id, $redirect_uri, $code_verifier ) {
 		global $wpdb;
 		$table = Activator::table_oauth_codes();
 		$hash  = Token_Manager::hash( (string) $code_plain );
@@ -101,6 +106,13 @@ class Code_Manager {
 		}
 		if ( ! hash_equals( (string) $row['redirect_uri'], (string) $redirect_uri ) ) {
 			return self::invalid( 'redirect_uri nao corresponde ao code.' );
+		}
+
+		// PKCE S256: base64url(sha256(code_verifier)) == code_challenge. Feito
+		// ANTES do UPDATE para nao queimar o code em caso de verifier errado.
+		$computed = rtrim( strtr( base64_encode( hash( 'sha256', (string) $code_verifier, true ) ), '+/', '-_' ), '=' );
+		if ( ! hash_equals( (string) $row['code_challenge'], $computed ) ) {
+			return self::invalid( 'Falha na verificacao PKCE.' );
 		}
 
 		// Lock otimista: so um troca vence a corrida (used_at IS NULL).

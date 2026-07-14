@@ -27,6 +27,30 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.3.1] - 2026-07-14
+
+### Corrigido
+
+- **PKCE verificado antes de consumir o authorization code.** Antes o code era
+  marcado como usado e só depois o PKCE era conferido — um `code_verifier`
+  errado (bug do cliente ou tentativa de interceptação) queimava o code e
+  obrigava novo consentimento. Agora, se o PKCE falhar, o code permanece válido
+  para a troca legítima.
+- **`redirect_uri` obrigatório no `/token`** (grant `authorization_code`): a
+  ausência agora retorna `invalid_request` (correto por RFC 6749) em vez de
+  `invalid_grant`.
+- **`/marreira-mcp-oauth/authorize`** responde `405 Method Not Allowed` a métodos
+  diferentes de GET/POST (antes qualquer método caía no fluxo do GET).
+- Removido o check de `Origin` do endpoint MCP, que era efetivamente inócuo (o
+  `permission_callback` autentica antes, então o ramo nunca disparava). Como a
+  autenticação é por Bearer token — credencial não-ambiente —, ataques de DNS
+  rebinding não se aplicam; o token não pode ser obtido por página maliciosa.
+
+### Documentação
+
+- `SKILL.md` e `SKILL.economy.md`: nova referência **completa de endpoints**
+  (incluindo os OAuth) e seção **"Conectar como conector (Claude.ai / ChatGPT)"**.
+
 ## [1.3.0] - 2026-07-14
 
 ### Adicionado

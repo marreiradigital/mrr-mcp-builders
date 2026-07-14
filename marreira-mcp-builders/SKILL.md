@@ -13,8 +13,15 @@ antes de chamar.
 ## 1. Conexão
 
 - **Endpoint MCP:** `https://SEU-SITE/wp-json/marreira-mcp/v1/mcp`
-- **Método:** `POST` (JSON-RPC 2.0, um JSON de resposta por POST).
-- **Auth:** header `Authorization: Bearer <token>`. TLS obrigatório.
+- **Método:** `POST` (JSON-RPC 2.0, um JSON de resposta por POST — transporte
+  Streamable HTTP stateless; o GET responde 405).
+- **Auth (duas formas):**
+  - **Token estático** no header `Authorization: Bearer <token>` (também aceito
+    `X-MMCB-Token`) — para clientes de desenvolvedor (Claude Code, API, Cursor,
+    n8n, curl).
+  - **OAuth 2.1** (Authorization Code + PKCE) — para os conectores de consumidor
+    do **Claude.ai** e do **ChatGPT**. Automático: veja a seção 1b.
+- **TLS obrigatório.**
 - **Rota oculta** do índice público de `/wp-json/`.
 - **Documentação (esta skill):** `GET /wp-json/marreira-mcp/v1/skill` (pública).
 - **Auto-descoberta:** `GET /wp-json/marreira-mcp/v1/describe` (com token) —
@@ -23,6 +30,28 @@ antes de chamar.
 O token carrega **escopos (abilities)**. Para as tools do builder você precisa
 da ability `builder`. Rotas de CLI geral exigem abilities específicas
 (`plugins`, `themes`, `core`, `files`, `content`, `db`, `db_query`, `exec`, ...).
+
+---
+
+## 1b. Conectar como conector (Claude.ai / ChatGPT)
+
+Para conectar o **Claude.ai** ou o **ChatGPT** como servidor MCP remoto, basta
+apontar o conector para a **URL do endpoint MCP**
+(`https://SEU-SITE/wp-json/marreira-mcp/v1/mcp`). O resto é automático:
+
+1. O app tenta o `initialize`, recebe `401` com `WWW-Authenticate` e descobre o
+   OAuth via `/.well-known/oauth-protected-resource`.
+2. Registra-se sozinho (Dynamic Client Registration) e abre a **tela de
+   consentimento no WordPress** — o administrador do site aprova e escolhe os
+   escopos.
+3. Recebe um access token (PKCE) e passa a chamar `tools/list` / `tools/call`
+   normalmente.
+
+Escopos concedidos por padrão: `builder`, `read`, `content`. Escopos sensíveis
+(`exec`, `db_query`, `files`, `plugins`, `themes`, `core`, `snippets`, `cli`,
+`db`) só ficam disponíveis se o administrador tiver ligado a trava dupla
+correspondente nas configurações. O administrador aprova cada cliente na aba
+**Conectores** do painel do plugin.
 
 ---
 
@@ -119,7 +148,36 @@ rota exige a ability correspondente. Consulte `GET /cli/describe`.
 
 ---
 
-## 8. Segurança (o que esperar)
+## 8. Endpoints (referência completa)
+
+Todos os endpoints expostos pelo plugin:
+
+| Endpoint | Método | Auth | Função |
+|---|---|---|---|
+| `/wp-json/marreira-mcp/v1/mcp` | POST | Bearer (token ou OAuth) | Dispatch JSON-RPC 2.0 (initialize, tools/list, tools/call, ping) |
+| `/wp-json/marreira-mcp/v1/skill` | GET | pública | Esta documentação |
+| `/wp-json/marreira-mcp/v1/describe` | GET | Bearer | Auto-descoberta: builder, tier, abilities, tools |
+| `/wp-json/marreira-mcp/v1/cli/...` | GET/POST/PUT/DELETE | Bearer + ability | CLI geral de WordPress (desligado de fábrica) |
+| `/wp-json/marreira-mcp/v1/cli/describe` | GET | Bearer | Lista as rotas `/cli/*` e seu estado |
+| `/wp-json/marreira-mcp/v1/cli/status` | GET | Bearer | Health-check (versão, PHP, WP, cli_enabled) |
+| `/wp-json/marreira-mcp/v1/cli/site` | GET | Bearer | Resumo do site |
+
+**OAuth (servidos na RAIZ do site, fora do `/wp-json/`):**
+
+| Endpoint | Método | Auth | Função |
+|---|---|---|---|
+| `/.well-known/oauth-protected-resource` | GET | pública | Metadata do recurso protegido (RFC 9728) |
+| `/.well-known/oauth-authorization-server` | GET | pública | Metadata do Authorization Server (RFC 8414) |
+| `/marreira-mcp-oauth/register` | POST | pública (rate-limited) | Dynamic Client Registration (RFC 7591) |
+| `/marreira-mcp-oauth/authorize` | GET/POST | cookie admin + nonce | Tela de consentimento; emite o authorization code |
+| `/marreira-mcp-oauth/token` | POST | client + PKCE | Troca code→token e refresh→token |
+
+Normalmente você **não chama os endpoints OAuth diretamente** — o app de IA faz
+isso sozinho ao adicionar o conector (seção 1b).
+
+---
+
+## 9. Segurança (o que esperar)
 
 - Token só como hash (HMAC-SHA256); escopos por token; expiração; throttle por
   IP; IP allowlist; o dono do token precisa continuar admin.

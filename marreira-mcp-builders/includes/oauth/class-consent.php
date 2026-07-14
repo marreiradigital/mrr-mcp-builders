@@ -42,8 +42,18 @@ class Consent {
 		$state          = isset( $_REQUEST['state'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['state'] ) ) : '';
 		$code_challenge = isset( $_REQUEST['code_challenge'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['code_challenge'] ) ) : '';
 		$cc_method      = isset( $_REQUEST['code_challenge_method'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['code_challenge_method'] ) ) : '';
-		$is_post        = isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) );
+		$method         = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) ) : 'GET';
+		$is_post        = ( 'POST' === $method );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		// 0) Metodo: /authorize so aceita GET (form) e POST (decisao).
+		if ( 'GET' !== $method && 'POST' !== $method ) {
+			status_header( 405 );
+			header( 'Allow: GET, POST' );
+			header( 'Content-Type: application/json; charset=utf-8' );
+			echo wp_json_encode( array( 'error' => 'method_not_allowed' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			exit;
+		}
 
 		// 1) Validacao dos parametros do protocolo (antes de qualquer redirect).
 		if ( 'code' !== $response_type ) {

@@ -54,19 +54,15 @@ class Token_Endpoint {
 		$client_id     = isset( $params['client_id'] ) ? (string) $params['client_id'] : '';
 		$code_verifier = isset( $params['code_verifier'] ) ? (string) $params['code_verifier'] : '';
 
-		if ( '' === $code || '' === $client_id || '' === $code_verifier ) {
-			return self::error( 'invalid_request', 'Parâmetros obrigatórios ausentes (code, client_id, code_verifier).' );
+		if ( '' === $code || '' === $client_id || '' === $code_verifier || '' === $redirect_uri ) {
+			return self::error( 'invalid_request', 'Parâmetros obrigatórios ausentes (code, client_id, redirect_uri, code_verifier).' );
 		}
 
-		$row = Code_Manager::consume( $code, $client_id, $redirect_uri );
+		// consume() valida client/redirect/expiracao E PKCE antes de marcar o
+		// code como usado (nao queima o code se o PKCE falhar).
+		$row = Code_Manager::consume( $code, $client_id, $redirect_uri, $code_verifier );
 		if ( is_wp_error( $row ) ) {
 			return self::error( 'invalid_grant', $row->get_error_message() );
-		}
-
-		// Verificacao PKCE: base64url(sha256(code_verifier)) == code_challenge.
-		$computed = rtrim( strtr( base64_encode( hash( 'sha256', $code_verifier, true ) ), '+/', '-_' ), '=' );
-		if ( ! hash_equals( (string) $row['code_challenge'], $computed ) ) {
-			return self::error( 'invalid_grant', 'Falha na verificação PKCE.' );
 		}
 
 		$settings  = wp_parse_args( (array) get_option( Activator::SETTINGS_OPTION, array() ), Activator::default_settings() );

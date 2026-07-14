@@ -7,6 +7,18 @@ enxuta para poupar contexto. Um site = um builder; veja os nomes exatos em
 ## Conexão
 - POST `https://SEU-SITE/wp-json/marreira-mcp/v1/mcp` — `Authorization: Bearer <token>`, TLS.
 - Handshake: `initialize` → `tools/list` → `tools/call`. Resultado em `result.content[0].text`.
+- **Conector Claude.ai / ChatGPT:** aponte o conector para a URL do MCP acima; o
+  OAuth (discovery + registro + consentimento no WordPress + token PKCE) é
+  automático. O admin aprova o cliente na aba "Conectores" do painel.
+
+## Endpoints
+- `POST /wp-json/marreira-mcp/v1/mcp` — JSON-RPC (Bearer: token ou OAuth).
+- `GET /wp-json/marreira-mcp/v1/skill` — esta doc (pública).
+- `GET /wp-json/marreira-mcp/v1/describe` — builder/tier/abilities/tools (Bearer).
+- `/wp-json/marreira-mcp/v1/cli/...` + `/cli/describe` — CLI geral (desligado).
+- OAuth (na raiz, uso automático pelo app): `GET /.well-known/oauth-protected-resource`,
+  `GET /.well-known/oauth-authorization-server`, `POST /marreira-mcp-oauth/register`,
+  `GET|POST /marreira-mcp-oauth/authorize`, `POST /marreira-mcp-oauth/token`.
 
 ## Regras (siga à risca)
 1. **Comece por `get_map`** (mapa compacto: páginas, templates, resumo de estilos).

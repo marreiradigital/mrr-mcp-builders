@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -152,6 +152,16 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
 
+= 1.3.1 =
+* Correção: PKCE verificado antes de consumir o authorization code (verifier
+  errado não queima mais o code).
+* redirect_uri obrigatório no /token (retorna invalid_request, por RFC 6749).
+* /marreira-mcp-oauth/authorize responde 405 a métodos diferentes de GET/POST.
+* Removido check de Origin inócuo do endpoint MCP (Bearer token já autentica;
+  DNS rebinding não se aplica a credencial não-ambiente).
+* Docs: SKILL.md e SKILL.economy.md com referência completa de endpoints e a
+  seção de como conectar Claude.ai / ChatGPT.
+
 = 1.3.0 =
 * Nova aba "Conectores" no painel: URL do servidor MCP para colar no Claude.ai/
   ChatGPT, lista de clientes registrados com aprovar/revogar e contagem de
@@ -225,6 +235,10 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.3.1 =
+Correções no fluxo OAuth (PKCE antes de consumir o code, 405 no authorize) e
+documentação completa dos endpoints nas skills. Recomendado.
 
 = 1.3.0 =
 Adiciona a aba Conectores para gerenciar as conexões OAuth (aprovar/revogar

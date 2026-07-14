@@ -335,16 +335,13 @@ class MCP_Server {
 	 * @return WP_REST_Response
 	 */
 	public function handle( WP_REST_Request $request ) {
-		// Protecao contra DNS rebinding (ataque de navegador): so valida Origin
-		// quando NAO ha token valido. O permission_callback ja autenticou antes
-		// deste callback; um Bearer valido (OAuth ou estatico) prova a identidade
-		// e torna o check de Origin redundante — assim liberamos conexoes
-		// server-to-server legitimas (Claude.ai/ChatGPT) que mandam Origin proprio.
-		$origin = $request->get_header( 'origin' );
-		if ( $origin && null === Rest_Guard::current_token() && ! $this->is_origin_allowed( $origin ) ) {
-			return $this->rpc_error( null, -32001, 'Origin not allowed.', 403 );
-		}
-
+		// Observacao de seguranca: o endpoint autentica por Bearer token (OAuth ou
+		// estatico), verificado no permission_callback ANTES deste callback. Como
+		// o token nao e uma credencial ambiente (diferente de cookie), ataques de
+		// DNS rebinding — que dependem do navegador reusar credenciais implicitas —
+		// nao se aplicam: uma pagina maliciosa nao consegue o token. Por isso nao
+		// bloqueamos por Origin, o que tambem permite conexoes server-to-server
+		// legitimas (Claude.ai/ChatGPT) que enviam Origin proprio.
 		$body = json_decode( $request->get_body(), true );
 
 		if ( ! is_array( $body ) || ! isset( $body['jsonrpc'] ) || '2.0' !== $body['jsonrpc'] ) {
@@ -408,24 +405,6 @@ class MCP_Server {
 				}
 				return $this->rpc_error( $id, -32601, 'Method not found: ' . $method, 200 );
 		}
-	}
-
-	/**
-	 * Verifica se a origin e permitida (mesma origem do site).
-	 *
-	 * @param string $origin Header Origin.
-	 * @return bool
-	 */
-	private function is_origin_allowed( $origin ) {
-		$site_host   = wp_parse_url( home_url(), PHP_URL_HOST );
-		$origin_host = wp_parse_url( $origin, PHP_URL_HOST );
-
-		$allowed_hosts = apply_filters(
-			'mmcb_allowed_origin_hosts',
-			array( $site_host, 'localhost', '127.0.0.1' )
-		);
-
-		return in_array( $origin_host, $allowed_hosts, true );
 	}
 
 	/**
