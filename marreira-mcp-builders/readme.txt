@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -152,6 +152,18 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
 
+= 1.0.2 =
+* Conformidade de transporte para conectores de IA externos (Claude.ai / ChatGPT):
+  primeira etapa da conexão como servidor MCP remoto de consumidor.
+* `initialize` passa a negociar `protocolVersion` — ecoa a versão pedida pelo
+  cliente quando suportada (`2025-11-25`, `2025-06-18`, `2025-03-26`) em vez de
+  responder sempre uma versão fixa.
+* Respostas 2xx do endpoint MCP passam a incluir o header `MCP-Protocol-Version`.
+* Respostas `401` do endpoint MCP passam a incluir `WWW-Authenticate: Bearer
+  resource_metadata="..."` — o gatilho do discovery OAuth (RFC 9728).
+* O check de `Origin` (anti DNS rebinding) só é aplicado sem token válido: um
+  Bearer autenticado libera conexões server-to-server que enviam `Origin` próprio.
+
 = 1.0.1 =
 * Correção: `/cli/exec/php` e `/cli/snippets` (criar/atualizar) retornavam erro
   fatal `Call to undefined function wp_tempnam()` — o lint carregava `wp_tempnam()`
@@ -182,6 +194,11 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+Prepara o plugin para conexão como conector de IA externo (Claude.ai / ChatGPT):
+negociação de versão do protocolo MCP e desafio OAuth (WWW-Authenticate). Sem
+impacto para quem já usa token estático no header.
 
 = 1.0.1 =
 Corrige erro fatal em /cli/exec/php e /cli/snippets (wp_tempnam indefinido).

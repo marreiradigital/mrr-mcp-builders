@@ -23,6 +23,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 class MCP_Server {
 
 	/**
+	 * Versoes do protocolo MCP que o servidor sabe falar (mais recente primeiro).
+	 *
+	 * O transporte e stateless (POST->JSON) e so expoe tools, entao as tres
+	 * revisoes sao compativeis. No initialize ecoamos a versao pedida pelo
+	 * cliente se estiver aqui; caso contrario devolvemos MMCB_MCP_PROTOCOL_VERSION.
+	 *
+	 * @var string[]
+	 */
+	const SUPPORTED_PROTOCOL_VERSIONS = array( '2025-11-25', '2025-06-18', '2025-03-26' );
+
+	/**
 	 * Registro de tools (lazy).
 	 *
 	 * @var Tool_Registry|null
@@ -38,6 +49,66 @@ class MCP_Server {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 		add_filter( 'rest_index', array( $this, 'hide_from_index' ) );
 		add_filter( 'rest_namespace_index', array( $this, 'hide_namespace_index' ), 10, 2 );
+		// Desafio OAuth: injeta WWW-Authenticate nos 401 do endpoint MCP para o
+		// cliente (Claude.ai/ChatGPT) iniciar o discovery do Authorization Server.
+		add_filter( 'rest_post_dispatch', array( $this, 'add_auth_challenge_header' ), 10, 3 );
+	}
+
+	/**
+	 * Versao do protocolo a usar na resposta do initialize.
+	 *
+	 * Ecoa a versao pedida pelo cliente quando suportada; senao a preferida.
+	 *
+	 * @param array $params Params do initialize.
+	 * @return string
+	 */
+	private function negotiate_protocol_version( array $params ) {
+		$requested = isset( $params['protocolVersion'] ) ? (string) $params['protocolVersion'] : '';
+		if ( '' !== $requested && in_array( $requested, self::SUPPORTED_PROTOCOL_VERSIONS, true ) ) {
+			return $requested;
+		}
+		return MMCB_MCP_PROTOCOL_VERSION;
+	}
+
+	/**
+	 * Ajusta headers das respostas do endpoint MCP:
+	 *
+	 * - Em 401, injeta `WWW-Authenticate: Bearer resource_metadata="..."` — o
+	 *   gatilho que faz o cliente MCP (Claude.ai/ChatGPT) buscar o Protected
+	 *   Resource Metadata e iniciar o fluxo OAuth (RFC 9728).
+	 * - Em respostas 2xx, ecoa `MCP-Protocol-Version` (a versao pedida pelo
+	 *   cliente quando suportada, senao a preferida) para conformidade com o
+	 *   transporte Streamable HTTP (2025-06-18+).
+	 *
+	 * @param WP_REST_Response $response Resposta.
+	 * @param mixed            $server   Servidor REST (nao usado).
+	 * @param WP_REST_Request  $request  Requisicao.
+	 * @return WP_REST_Response
+	 */
+	public function add_auth_challenge_header( $response, $server, $request ) {
+		if ( ! $response instanceof WP_REST_Response || ! $request instanceof WP_REST_Request ) {
+			return $response;
+		}
+		$route = (string) $request->get_route();
+		if ( 0 !== strpos( ltrim( $route, '/' ), MMCB_REST_NAMESPACE . MMCB_REST_ROUTE ) ) {
+			return $response;
+		}
+
+		$status = (int) $response->get_status();
+
+		if ( 401 === $status ) {
+			$metadata_url = home_url( '/.well-known/oauth-protected-resource' );
+			$response->header( 'WWW-Authenticate', sprintf( 'Bearer resource_metadata="%s"', $metadata_url ) );
+			return $response;
+		}
+
+		if ( $status >= 200 && $status < 300 ) {
+			$requested = (string) $request->get_header( 'mcp_protocol_version' );
+			$version   = in_array( $requested, self::SUPPORTED_PROTOCOL_VERSIONS, true ) ? $requested : MMCB_MCP_PROTOCOL_VERSION;
+			$response->header( 'MCP-Protocol-Version', $version );
+		}
+
+		return $response;
 	}
 
 	/**
@@ -264,9 +335,13 @@ class MCP_Server {
 	 * @return WP_REST_Response
 	 */
 	public function handle( WP_REST_Request $request ) {
-		// Protecao contra DNS rebinding: valida Origin quando presente.
+		// Protecao contra DNS rebinding (ataque de navegador): so valida Origin
+		// quando NAO ha token valido. O permission_callback ja autenticou antes
+		// deste callback; um Bearer valido (OAuth ou estatico) prova a identidade
+		// e torna o check de Origin redundante — assim liberamos conexoes
+		// server-to-server legitimas (Claude.ai/ChatGPT) que mandam Origin proprio.
 		$origin = $request->get_header( 'origin' );
-		if ( $origin && ! $this->is_origin_allowed( $origin ) ) {
+		if ( $origin && null === Rest_Guard::current_token() && ! $this->is_origin_allowed( $origin ) ) {
 			return $this->rpc_error( null, -32001, 'Origin not allowed.', 403 );
 		}
 
@@ -287,7 +362,7 @@ class MCP_Server {
 				return $this->rpc_result(
 					$id,
 					array(
-						'protocolVersion' => MMCB_MCP_PROTOCOL_VERSION,
+						'protocolVersion' => $this->negotiate_protocol_version( $params ),
 						'capabilities'    => array(
 							'tools' => array( 'listChanged' => false ),
 						),

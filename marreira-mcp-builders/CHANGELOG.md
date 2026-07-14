@@ -27,6 +27,34 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.0.2] - 2026-07-14
+
+### Adicionado
+
+- **Conformidade de transporte para conectores de IA externos (Claude.ai /
+  ChatGPT).** Primeira etapa da conexão como servidor MCP remoto de consumidor:
+  - **Negociação de `protocolVersion`** no `initialize`: o servidor agora ecoa a
+    versão pedida pelo cliente quando suportada (`2025-11-25`, `2025-06-18` ou
+    `2025-03-26`), em vez de responder sempre uma versão fixa. Clientes modernos
+    (Claude.ai, ChatGPT) exigem esse eco para completar o handshake.
+  - **Header `MCP-Protocol-Version`** ecoado nas respostas 2xx do endpoint MCP.
+  - **Header `WWW-Authenticate: Bearer resource_metadata="..."`** nas respostas
+    `401` do endpoint MCP — é o gatilho que faz o cliente iniciar o discovery
+    OAuth (RFC 9728). Aponta para `/.well-known/oauth-protected-resource` (a ser
+    servido na próxima etapa).
+
+### Alterado
+
+- **Check de `Origin` (anti DNS rebinding)** só é aplicado quando não há Bearer
+  token válido. Um token autenticado (OAuth ou estático) já prova a identidade,
+  então a validação de `Origin` — que serve contra ataques de navegador — passa
+  a ser ignorada para conexões server-to-server legítimas que enviam `Origin`
+  próprio (ex.: `https://claude.ai`). Sem token, o comportamento anterior é
+  mantido.
+- **Versão preferida do protocolo MCP** atualizada de `2025-03-26` para
+  `2025-06-18` (constante `MMCB_MCP_PROTOCOL_VERSION`), usada como resposta
+  quando o cliente pede uma versão desconhecida.
+
 ## [1.0.1] - 2026-07-13
 
 ### Corrigido

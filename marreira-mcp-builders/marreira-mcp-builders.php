@@ -3,7 +3,7 @@
  * Plugin Name:       MarreiraMCP Builders
  * Plugin URI:        https://marreiradigital.com.br/marreira-mcp-builders
  * Description:        Servidor MCP (Model Context Protocol) unificado para criar e editar paginas e templates do Bricks Builder OU do Elementor via IA, com CLI completo (estilo WP-CLI), multi-token com escopos, batch de uma requisicao, audit log e endpoints ocultos do indice publico do REST.
- * Version:           1.0.1
+ * Version:           1.0.2
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Paulo Marreira
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 // Constantes do plugin.
 // ---------------------------------------------------------------------------
-define( 'MMCB_VERSION', '1.0.1' );
+define( 'MMCB_VERSION', '1.0.2' );
 define( 'MMCB_PLUGIN_FILE', __FILE__ );
 define( 'MMCB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MMCB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -42,8 +42,10 @@ define( 'MMCB_TABLE_TOKENS', 'mmcb_tokens' );
 define( 'MMCB_TABLE_LOGS', 'mmcb_logs' );
 define( 'MMCB_TABLE_SNIPPETS', 'mmcb_snippets' );
 
-// Versao do protocolo MCP suportada.
-define( 'MMCB_MCP_PROTOCOL_VERSION', '2025-03-26' );
+// Versao do protocolo MCP preferida (a mais recente que suportamos). O servidor
+// negocia no initialize: ecoa a versao pedida pelo cliente se estiver na lista
+// suportada (ver MCP_Server::SUPPORTED_PROTOCOL_VERSIONS), senao devolve esta.
+define( 'MMCB_MCP_PROTOCOL_VERSION', '2025-06-18' );
 
 // ---------------------------------------------------------------------------
 // Autoloader simples (PSR-ish) mapeando o namespace para /includes.
