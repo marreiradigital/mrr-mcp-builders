@@ -110,6 +110,101 @@ class Token_Manager {
 	}
 
 	/**
+	 * Emite um par access token + refresh token para um client OAuth.
+	 *
+	 * O access token e um token MMCB normal (mesma tabela, mesmo pipeline HMAC do
+	 * Rest_Guard), marcado com source='oauth' e vida curta (default 1h). O refresh
+	 * token e guardado apenas como hash HMAC e serve para emitir novos pares via
+	 * rotate_refresh(). expires_at em UTC (gmdate), como em generate().
+	 *
+	 * @param string[] $abilities   Abilities ja filtradas pela trava dupla (Scopes).
+	 * @param int      $user_id     Admin que consentiu (dono do token).
+	 * @param string   $client_id   Client OAuth.
+	 * @param int      $access_ttl  Validade do access token em segundos.
+	 * @param int      $refresh_ttl Validade do refresh token em segundos.
+	 * @return array{id:int,access_token:string,refresh_token:string,expires_in:int,abilities:string[]}
+	 */
+	public static function generate_oauth( array $abilities, $user_id, $client_id, $access_ttl = 3600, $refresh_ttl = 2592000 ) {
+		global $wpdb;
+		$table = Activator::table_tokens();
+
+		$abilities = array_values( array_intersect( $abilities, self::KNOWN_ABILITIES ) );
+		if ( empty( $abilities ) ) {
+			$abilities = array( 'builder', 'read', 'content' );
+		}
+
+		$prefix        = 'oat_' . wp_generate_password( 6, false, false );
+		$secret        = wp_generate_password( 48, false, false );
+		$access_plain  = $prefix . '.' . $secret;
+		$refresh_plain = wp_generate_password( 64, false, false );
+		$now           = time();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->insert(
+			$table,
+			array(
+				'name'               => 'OAuth: ' . substr( (string) $client_id, 0, 60 ),
+				'token_hash'         => self::hash( $access_plain ),
+				'prefix'             => $prefix,
+				'abilities'          => wp_json_encode( $abilities ),
+				'status'             => 'active',
+				'source'             => 'oauth',
+				'refresh_hash'       => self::hash( $refresh_plain ),
+				'refresh_expires_at' => gmdate( 'Y-m-d H:i:s', $now + (int) $refresh_ttl ),
+				'oauth_client_id'    => (string) $client_id,
+				'created_by'         => (int) $user_id,
+				'expires_at'         => gmdate( 'Y-m-d H:i:s', $now + (int) $access_ttl ),
+				'created_at'         => current_time( 'mysql' ),
+			),
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' )
+		);
+
+		return array(
+			'id'            => (int) $wpdb->insert_id,
+			'access_token'  => $access_plain,
+			'refresh_token' => $refresh_plain,
+			'expires_in'    => (int) $access_ttl,
+			'abilities'     => $abilities,
+		);
+	}
+
+	/**
+	 * Rotaciona um refresh token: revoga o par atual e emite um novo par para o
+	 * mesmo client/usuario/abilities. Rotacao obrigatoria (o refresh antigo deixa
+	 * de valer). Detecta reuso: refresh que nao bate em token ativo e recusado.
+	 *
+	 * @param string $refresh_plain Refresh token recebido.
+	 * @param string $client_id     Client que solicita a rotacao.
+	 * @return array|\WP_Error Novo par (como generate_oauth) ou erro invalid_grant.
+	 */
+	public static function rotate_refresh( $refresh_plain, $client_id ) {
+		global $wpdb;
+		$table = Activator::table_tokens();
+		$hash  = self::hash( (string) $refresh_plain );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE refresh_hash = %s AND source = 'oauth' LIMIT 1", $hash ), ARRAY_A );
+
+		if ( ! $row || 'active' !== $row['status'] ) {
+			return new \WP_Error( 'invalid_grant', __( 'Refresh token invalido ou revogado.', 'marreira-mcp-builders' ) );
+		}
+		if ( ! hash_equals( (string) $row['oauth_client_id'], (string) $client_id ) ) {
+			return new \WP_Error( 'invalid_grant', __( 'Client nao corresponde ao refresh token.', 'marreira-mcp-builders' ) );
+		}
+		if ( ! empty( $row['refresh_expires_at'] ) && gmdate( 'Y-m-d H:i:s' ) > (string) $row['refresh_expires_at'] ) {
+			return new \WP_Error( 'invalid_grant', __( 'Refresh token expirado.', 'marreira-mcp-builders' ) );
+		}
+
+		// Revoga o par antigo (rotacao) antes de emitir o novo.
+		self::revoke( (int) $row['id'] );
+
+		$abilities = json_decode( (string) $row['abilities'], true );
+		$abilities = is_array( $abilities ) ? $abilities : array( 'builder', 'read', 'content' );
+
+		return self::generate_oauth( $abilities, (int) $row['created_by'], (string) $client_id );
+	}
+
+	/**
 	 * Busca um token pela versao em texto puro (lookup por hash).
 	 *
 	 * @param string $plaintext Token recebido.

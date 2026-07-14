@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -152,6 +152,18 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
 
+= 1.2.0 =
+* Fluxo OAuth completo (Authorization Code + PKCE) — fecha a conexão como
+  conector de IA externo (Claude.ai / ChatGPT).
+* Tela de consentimento do administrador em /marreira-mcp-oauth/authorize
+  (cookie de sessão do WordPress + nonce), com escopos e trava dupla nos
+  sensíveis.
+* /marreira-mcp-oauth/token: troca code->token (PKCE S256) e refresh->token
+  (rotação). Tokens emitidos via Token_Manager (mesma tabela/pipeline HMAC).
+* Authorization codes single-use, TTL 60s, só como hash, com lock contra corrida.
+* Mapa único escopo<->ability (OAuth\Scopes) com a mesma trava dupla do CLI geral.
+* Mais chaves mascaradas no audit; redirect_uri por correspondência exata.
+
 = 1.1.0 =
 * Discovery OAuth e Dynamic Client Registration para conexão como conector de IA
   externo (Claude.ai / ChatGPT), servidos na raiz do site (fora do /wp-json).
@@ -205,6 +217,10 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+Fecha o fluxo OAuth: já é possível conectar Claude.ai / ChatGPT como conector
+remoto. Aprove o cliente no painel e autorize na tela de consentimento.
 
 = 1.1.0 =
 Adiciona discovery OAuth e registro de clients para conectar Claude.ai / ChatGPT.

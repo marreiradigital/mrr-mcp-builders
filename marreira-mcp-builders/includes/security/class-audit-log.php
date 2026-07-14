@@ -27,7 +27,7 @@ class Audit_Log {
 	 *
 	 * @var string[]
 	 */
-	const SENSITIVE_KEYS = array( 'password', 'pass', 'token', 'secret', 'api_key', 'apikey', 'authorization', 'auth', 'cookie', 'nonce' );
+	const SENSITIVE_KEYS = array( 'password', 'pass', 'token', 'secret', 'api_key', 'apikey', 'authorization', 'auth', 'cookie', 'nonce', 'code', 'code_verifier', 'access_token', 'refresh_token', 'registration_access_token', 'client_secret' );
 
 	/**
 	 * Chaves volumosas: guardamos so o tamanho, nao o conteudo.

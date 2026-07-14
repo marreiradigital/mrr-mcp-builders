@@ -56,12 +56,14 @@ class Router {
 			$path = untrailingslashit( $path );
 		}
 
-		$base        = self::oauth_base_path();
-		$is_wk_pr    = self::matches_well_known( $path, '/.well-known/oauth-protected-resource' );
-		$is_wk_as    = self::matches_well_known( $path, '/.well-known/oauth-authorization-server' );
-		$is_register = ( $path === $base . '/register' );
+		$base         = self::oauth_base_path();
+		$is_wk_pr     = self::matches_well_known( $path, '/.well-known/oauth-protected-resource' );
+		$is_wk_as     = self::matches_well_known( $path, '/.well-known/oauth-authorization-server' );
+		$is_register  = ( $path === $base . '/register' );
+		$is_authorize = ( $path === $base . '/authorize' );
+		$is_token     = ( $path === $base . '/token' );
 
-		if ( ! $is_wk_pr && ! $is_wk_as && ! $is_register ) {
+		if ( ! $is_wk_pr && ! $is_wk_as && ! $is_register && ! $is_authorize && ! $is_token ) {
 			return; // Nao e um caminho nosso: deixa o WordPress seguir.
 		}
 
@@ -93,6 +95,24 @@ class Router {
 				);
 			}
 			$result = Client_Manager::handle_register();
+			self::emit_json( (int) $result['status'], (array) $result['body'] );
+		}
+		if ( $is_authorize ) {
+			// Renderiza HTML / redireciona e encerra internamente (nao e JSON).
+			Consent::handle();
+			exit;
+		}
+		if ( $is_token ) {
+			if ( 'POST' !== $method ) {
+				self::emit_json(
+					405,
+					array(
+						'error'             => 'invalid_request',
+						'error_description' => 'Use POST.',
+					)
+				);
+			}
+			$result = Token_Endpoint::handle();
 			self::emit_json( (int) $result['status'], (array) $result['body'] );
 		}
 	}

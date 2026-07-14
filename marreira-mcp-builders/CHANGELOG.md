@@ -27,6 +27,36 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.2.0] - 2026-07-14
+
+### Adicionado
+
+- **Fluxo OAuth completo (Authorization Code + PKCE)** — terceira etapa, que
+  fecha a conexão como conector de IA externo (Claude.ai / ChatGPT):
+  - `GET|POST /marreira-mcp-oauth/authorize` — tela de **consentimento** do
+    administrador, servida na raiz do site (não é rota REST: usa o cookie de
+    sessão do WordPress e o login nativo). Exige admin com `manage_options` e
+    protege o POST com nonce. Mostra os escopos pedidos; os **sensíveis** só
+    aparecem concedíveis se a trava dupla estiver ligada nas configurações.
+  - `POST /marreira-mcp-oauth/token` — troca `authorization_code` por access
+    token (com verificação **PKCE S256**) e `refresh_token` por um novo par
+    (rotação obrigatória). Emite os tokens via `Token_Manager::generate_oauth()`
+    (mesma tabela e pipeline HMAC dos tokens estáticos), com validade curta.
+  - Authorization codes **single-use**, TTL de 60s, guardados só como hash HMAC,
+    com lock otimista contra corrida na troca.
+- **Mapa único escopo OAuth ↔ ability** (`OAuth\Scopes`) com a mesma trava dupla
+  do CLI geral: escopos perigosos (`exec`, `db_query`, `files`, `plugins`,
+  `themes`, `core`, `snippets`, `cli`, `db`) só entram no token se a flag de
+  settings correspondente estiver ligada; default seguro `builder read content`.
+
+### Segurança
+
+- Novas chaves mascaradas no audit log: `code`, `code_verifier`, `access_token`,
+  `refresh_token`, `registration_access_token`, `client_secret`.
+- `redirect_uri` validado por correspondência exata contra os registrados no
+  cliente (anti open-redirect); rotação de refresh token; consentimento humano
+  obrigatório antes de emitir qualquer code.
+
 ## [1.1.0] - 2026-07-14
 
 ### Adicionado
