@@ -332,6 +332,7 @@
 	var TABS = [
 		[ 'painel',        'Painel'        ],
 		[ 'tokens',        'Tokens'        ],
+		[ 'conectores',    'Conectores'    ],
 		[ 'logs',          'Logs'          ],
 		[ 'configuracoes', 'Configurações' ],
 		[ 'ferramentas',   'Ferramentas'   ],
@@ -665,9 +666,91 @@
 		'</section>';
 	}
 
+	// ---- Tab: Conectores (OAuth) ----
+	function clientStatusBadge( st ) {
+		if ( st === 'approved' ) { return badge( 'is-on', '● aprovado' ); }
+		if ( st === 'revoked' )  { return badge( 'is-off', '○ revogado' ); }
+		return badge( 'is-warn', '▲ pendente' );
+	}
+
+	function clientsTable( clients ) {
+		if ( ! clients || ! clients.length ) {
+			return '<p class="mmcb-hint" style="margin-top:12px">Nenhum cliente registrado ainda. Ao adicionar o conector no Claude.ai/ChatGPT, ele aparece aqui para aprovação.</p>';
+		}
+		var rows = clients.map( function ( c ) {
+			var uris = ( c.redirect_uris || [] ).map( function ( u ) { return esc( u ); } ).join( '<br>' );
+			var actions = '';
+			if ( c.status === 'pending' ) {
+				actions += '<button class="mmcb-btn mmcb-btn-sm mmcb-btn-primary" data-action="approve-client" data-id="' + c.id + '">Aprovar</button> ';
+			}
+			if ( c.status !== 'revoked' ) {
+				actions += '<button class="mmcb-btn mmcb-btn-sm" data-action="revoke-client" data-id="' + c.id + '">Revogar</button>';
+			}
+			return '<tr>' +
+				'<td>' + esc( c.client_name || '—' ) + '<br><code class="mmcb-mono" style="font-size:11px">' + esc( c.client_id ) + '</code></td>' +
+				'<td class="mmcb-mono" style="font-size:11px;max-width:260px;overflow-wrap:anywhere">' + uris + '</td>' +
+				'<td>' + clientStatusBadge( c.status ) + '</td>' +
+				'<td>' + esc( fmtDate( c.created_at ) ) + '</td>' +
+				'<td>' + ( actions || '—' ) + '</td>' +
+			'</tr>';
+		} ).join( '' );
+		return '<div class="mmcb-table-wrap"><table class="mmcb-table">' +
+			'<thead><tr><th>Cliente</th><th>Redirect URIs</th><th>Status</th><th>Registrado</th><th>Ações</th></tr></thead>' +
+			'<tbody>' + rows + '</tbody></table></div>';
+	}
+
+	function viewConectores() {
+		var s   = state.status;
+		var oa  = s.oauth || {};
+		var ep  = oa.endpoints || {};
+		var mcp = ( s.endpoints && s.endpoints.mcp ) || '';
+		var clients = s._clients;
+
+		var pendingBadge = oa.pending > 0 ? ' ' + badge( 'is-warn', oa.pending + ( oa.pending === 1 ? ' pendente' : ' pendentes' ) ) : '';
+
+		var connectCard =
+			'<section class="mmcb-card mmcb-span-2">' +
+				'<h2>Conectar Claude.ai / ChatGPT</h2>' +
+				'<p class="mmcb-hint">No app de IA, adicione um <strong>conector (servidor MCP remoto)</strong> apontando para a URL abaixo. A autenticação OAuth é automática: o app abre uma tela de consentimento aqui no WordPress, você autoriza, e pronto.</p>' +
+				'<div class="mmcb-field"><label>URL do servidor MCP (cole no conector)</label>' +
+					'<div class="mmcb-copy-row"><code class="mmcb-code" id="mmcb-oauth-mcp">' + esc( mcp ) + '</code>' +
+					'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#mmcb-oauth-mcp">Copiar</button></div>' +
+				'</div>' +
+				'<details style="margin-top:10px"><summary class="mmcb-hint" style="cursor:pointer">Endpoints OAuth (referência técnica)</summary>' +
+					'<ul class="mmcb-hint" style="margin-top:8px;line-height:1.9;overflow-wrap:anywhere">' +
+						'<li>Discovery: <code class="mmcb-mono">' + esc( ep.protected_resource || '' ) + '</code></li>' +
+						'<li>Auth server: <code class="mmcb-mono">' + esc( ep.authorization_server || '' ) + '</code></li>' +
+						'<li>Registro (DCR): <code class="mmcb-mono">' + esc( ep.register || '' ) + '</code></li>' +
+						'<li>Autorização: <code class="mmcb-mono">' + esc( ep.authorize || '' ) + '</code></li>' +
+						'<li>Token: <code class="mmcb-mono">' + esc( ep.token || '' ) + '</code></li>' +
+					'</ul>' +
+				'</details>';
+
+		if ( ! oa.enabled ) {
+			connectCard += '<p class="mmcb-flash-warn" style="margin-top:12px">⚠ O conector OAuth está desligado. Ligue abaixo para permitir novas conexões.</p>';
+		}
+		connectCard +=
+				'<div style="margin-top:14px">' +
+					toggle( 'enable_oauth', 'Habilitar conector OAuth', 'Expõe o discovery e o fluxo OAuth para apps de IA externos. A segurança vem do seu consentimento a cada cliente.', oa.enabled ) +
+					toggle( 'oauth_auto_approve', 'Aprovar clientes automaticamente', '⚠ Não recomendado. Ligado: clientes registrados via DCR já ficam aptos sem sua aprovação manual (você ainda autoriza na tela de consentimento).', oa.auto_approve ) +
+				'</div>' +
+			'</section>';
+
+		var clientsCard =
+			'<section class="mmcb-card mmcb-span-2">' +
+				'<h2>Clientes conectados' + pendingBadge + '</h2>' +
+				'<p class="mmcb-hint">Cada app que se registra aparece aqui. Aprove os que você reconhece; revogue os demais. Aprovar um cliente não concede acesso sozinho — o acesso só nasce quando você autoriza os escopos na tela de consentimento.</p>' +
+				'<div class="mmcb-actions" style="margin-top:0;margin-bottom:12px"><button class="mmcb-btn mmcb-btn-sm" data-action="clients-refresh">↻ Atualizar</button></div>' +
+				( clients === undefined ? '<p class="mmcb-hint">Carregando…</p>' : clientsTable( clients ) ) +
+			'</section>';
+
+		return '<div class="mmcb-grid cols-2">' + connectCard + clientsCard + '</div>';
+	}
+
 	function viewFor( tab, logsData ) {
 		var s = state.status;
 		if ( tab === 'tokens' )        { return viewTokens( s._tokens || [] ); }
+		if ( tab === 'conectores' )    { return viewConectores(); }
 		if ( tab === 'logs' )          { return viewLogs( logsData || state.logs.data ); }
 		if ( tab === 'configuracoes' ) { return viewConfiguracoes(); }
 		if ( tab === 'ferramentas' )   { return viewFerramentas(); }
@@ -693,11 +776,16 @@
 	// =========================================================================
 
 	function saveSettings( overrides, okMsg ) {
-		var st   = state.status.settings;
-		var data = Object.assign( {}, st, overrides || {} );
+		var st       = state.status.settings;
+		var data     = Object.assign( {}, st, overrides || {} );
+		var prevTok  = state.status._tokens;
+		var prevCli  = state.status._clients;
 		return post( 'mmcb_save_settings', data ).then( function ( res ) {
 			if ( res && res.success ) {
 				state.status = res.data;
+				// Preserva listas carregadas sob demanda (nao vem no status).
+				if ( prevTok !== undefined ) { state.status._tokens = prevTok; }
+				if ( prevCli !== undefined ) { state.status._clients = prevCli; }
 				toast( okMsg || 'Configurações salvas.', 'ok' );
 				render();
 			} else {
@@ -730,6 +818,17 @@
 		} );
 	}
 
+	// Carrega clients OAuth e atualiza estado
+	function loadClients( cb ) {
+		post( 'mmcb_list_oauth_clients' ).then( function ( res ) {
+			if ( res && res.success ) {
+				state.status._clients = res.data.clients || [];
+				if ( state.status.oauth ) { state.status.oauth.pending = res.data.pending || 0; }
+				if ( cb ) { cb(); } else { render(); }
+			}
+		} );
+	}
+
 	// =========================================================================
 	// DELEGAÇÃO DE EVENTOS — APP PRINCIPAL
 	// =========================================================================
@@ -747,6 +846,9 @@
 			state.tab = tabBtn.getAttribute( 'data-tab' );
 			if ( state.tab === 'tokens' ) {
 				loadTokens( function () { render(); } );
+			} else if ( state.tab === 'conectores' ) {
+				render();
+				loadClients();
 			} else if ( state.tab === 'logs' ) {
 				state.logs.page = 1;
 				render();
@@ -871,6 +973,39 @@
 			} );
 		}
 
+		// Aprovar client OAuth
+		if ( action === 'approve-client' ) {
+			var idAp = act.getAttribute( 'data-id' );
+			act.disabled = true;
+			post( 'mmcb_approve_oauth_client', { id: idAp } ).then( function ( res ) {
+				if ( res && res.success ) {
+					state.status._clients = res.data.clients || [];
+					if ( state.status.oauth ) { state.status.oauth.pending = res.data.pending || 0; }
+					render();
+					toast( 'Cliente aprovado.', 'ok' );
+				} else { toast( 'Falha ao aprovar.', 'err' ); }
+			} ).catch( function () { toast( 'Erro de rede.', 'err' ); } );
+		}
+
+		// Revogar client OAuth
+		if ( action === 'revoke-client' ) {
+			if ( ! window.confirm( 'Revogar este cliente? Ele perde o acesso e precisará ser reautorizado.' ) ) { return; }
+			var idRv = act.getAttribute( 'data-id' );
+			post( 'mmcb_revoke_oauth_client', { id: idRv } ).then( function ( res ) {
+				if ( res && res.success ) {
+					state.status._clients = res.data.clients || [];
+					if ( state.status.oauth ) { state.status.oauth.pending = res.data.pending || 0; }
+					render();
+					toast( 'Cliente revogado.', 'ok' );
+				} else { toast( 'Falha ao revogar.', 'err' ); }
+			} );
+		}
+
+		// Atualizar lista de clients
+		if ( action === 'clients-refresh' ) {
+			loadClients();
+		}
+
 		// Rate limit
 		if ( action === 'save-rate' ) {
 			var rl = document.getElementById( 'mmcb-rl' );
@@ -939,7 +1074,7 @@
 		if ( ! tg ) { return; }
 		var key = tg.getAttribute( 'data-toggle' );
 		// Apenas segurança básica auto-salva; CLI avançado requer botão
-		var autoSave = [ 'https_only', 'block_code' ];
+		var autoSave = [ 'https_only', 'block_code', 'enable_oauth', 'oauth_auto_approve' ];
 		if ( autoSave.indexOf( key ) !== -1 ) {
 			var ov = {}; ov[ key ] = tg.checked;
 			saveSettings( ov, tg.checked ? 'Ativado.' : 'Desativado.' );

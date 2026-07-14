@@ -11,6 +11,7 @@ use Marreira\MCP_Builders\Activator;
 use Marreira\MCP_Builders\Auth\Token_Manager;
 use Marreira\MCP_Builders\Builders\Builder_Manager;
 use Marreira\MCP_Builders\MCP\MCP_Server;
+use Marreira\MCP_Builders\OAuth\Client_Manager;
 use Marreira\MCP_Builders\Security\Audit_Log;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -72,6 +73,9 @@ class Admin {
 		add_action( 'wp_ajax_mmcb_delete_token', array( $this, 'ajax_delete_token' ) );
 		add_action( 'wp_ajax_mmcb_logs', array( $this, 'ajax_logs' ) );
 		add_action( 'wp_ajax_mmcb_selftest', array( $this, 'ajax_selftest' ) );
+		add_action( 'wp_ajax_mmcb_list_oauth_clients', array( $this, 'ajax_list_oauth_clients' ) );
+		add_action( 'wp_ajax_mmcb_approve_oauth_client', array( $this, 'ajax_approve_oauth_client' ) );
+		add_action( 'wp_ajax_mmcb_revoke_oauth_client', array( $this, 'ajax_revoke_oauth_client' ) );
 	}
 
 	/**
@@ -214,6 +218,20 @@ class Admin {
 				'allowed_ips'        => (string) $settings['allowed_ips'],
 				'log_retention_days' => (int) $settings['log_retention_days'],
 				'db_blacklist'       => isset( $settings['db_blacklist'] ) ? (string) $settings['db_blacklist'] : '',
+				'enable_oauth'       => ! empty( $settings['enable_oauth'] ),
+				'oauth_auto_approve' => ! empty( $settings['oauth_auto_approve'] ),
+			),
+			'oauth'              => array(
+				'enabled'      => ! empty( $settings['enable_oauth'] ),
+				'auto_approve' => ! empty( $settings['oauth_auto_approve'] ),
+				'pending'      => Client_Manager::count_pending(),
+				'endpoints'    => array(
+					'protected_resource'   => esc_url_raw( home_url( '/.well-known/oauth-protected-resource' ) ),
+					'authorization_server' => esc_url_raw( home_url( '/.well-known/oauth-authorization-server' ) ),
+					'register'             => esc_url_raw( home_url( MMCB_OAUTH_BASE_PATH . '/register' ) ),
+					'authorize'            => esc_url_raw( home_url( MMCB_OAUTH_BASE_PATH . '/authorize' ) ),
+					'token'                => esc_url_raw( home_url( MMCB_OAUTH_BASE_PATH . '/token' ) ),
+				),
 			),
 			'token_count'        => Token_Manager::count_active(),
 			'tools'              => $defs,
@@ -281,6 +299,8 @@ class Admin {
 		$settings['allow_php_exec']     = ! empty( $_POST['allow_php_exec'] ) && 'false' !== $_POST['allow_php_exec'];
 		$settings['allow_db_query']     = ! empty( $_POST['allow_db_query'] ) && 'false' !== $_POST['allow_db_query'];
 		$settings['allow_file_write']   = ! empty( $_POST['allow_file_write'] ) && 'false' !== $_POST['allow_file_write'];
+		$settings['enable_oauth']       = ! empty( $_POST['enable_oauth'] ) && 'false' !== $_POST['enable_oauth'];
+		$settings['oauth_auto_approve'] = ! empty( $_POST['oauth_auto_approve'] ) && 'false' !== $_POST['oauth_auto_approve'];
 		$settings['allowed_ips']        = isset( $_POST['allowed_ips'] ) ? sanitize_textarea_field( wp_unslash( $_POST['allowed_ips'] ) ) : '';
 		$settings['log_retention_days'] = isset( $_POST['log_retention_days'] ) ? max( 1, absint( wp_unslash( $_POST['log_retention_days'] ) ) ) : 90;
 		$settings['db_blacklist']       = isset( $_POST['db_blacklist'] ) ? sanitize_textarea_field( wp_unslash( $_POST['db_blacklist'] ) ) : '';
@@ -468,5 +488,105 @@ class Admin {
 		}
 
 		wp_send_json_success( array( 'ok' => false, 'message' => 'Nenhum builder ativo. Conclua o onboarding.' ) );
+	}
+
+	/**
+	 * Serializa os clients OAuth para o painel (redirect_uris decodificados).
+	 *
+	 * @return array
+	 */
+	private function oauth_clients_payload() {
+		$out = array();
+		foreach ( Client_Manager::list_all() as $c ) {
+			$uris  = json_decode( (string) $c['redirect_uris'], true );
+			$out[] = array(
+				'id'            => (int) $c['id'],
+				'client_id'     => (string) $c['client_id'],
+				'client_name'   => (string) $c['client_name'],
+				'redirect_uris' => is_array( $uris ) ? $uris : array(),
+				'status'        => (string) $c['status'],
+				'reg_ip'        => (string) $c['reg_ip'],
+				'created_at'    => (string) $c['created_at'],
+				'approved_at'   => (string) $c['approved_at'],
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * AJAX: lista clients OAuth.
+	 *
+	 * @return void
+	 */
+	public function ajax_list_oauth_clients() {
+		$this->verify();
+		wp_send_json_success(
+			array(
+				'clients' => $this->oauth_clients_payload(),
+				'pending' => Client_Manager::count_pending(),
+			)
+		);
+	}
+
+	/**
+	 * AJAX: aprovar um client OAuth.
+	 *
+	 * @return void
+	 */
+	public function ajax_approve_oauth_client() {
+		$this->verify();
+		$id = isset( $_POST['id'] ) ? absint( wp_unslash( $_POST['id'] ) ) : 0;
+		if ( $id > 0 ) {
+			Client_Manager::approve( $id, get_current_user_id() );
+			Audit_Log::log(
+				array(
+					'method'           => 'AJAX',
+					'route'            => 'admin/oauth/approve',
+					'action'           => 'oauth:client_approved',
+					'status_code'      => 200,
+					'user_id'          => get_current_user_id(),
+					'ip'               => Audit_Log::client_ip(),
+					'response_summary' => 'Client OAuth #' . $id . ' aprovado.',
+					'success'          => true,
+				)
+			);
+		}
+		wp_send_json_success(
+			array(
+				'clients' => $this->oauth_clients_payload(),
+				'pending' => Client_Manager::count_pending(),
+			)
+		);
+	}
+
+	/**
+	 * AJAX: revogar um client OAuth.
+	 *
+	 * @return void
+	 */
+	public function ajax_revoke_oauth_client() {
+		$this->verify();
+		$id = isset( $_POST['id'] ) ? absint( wp_unslash( $_POST['id'] ) ) : 0;
+		if ( $id > 0 ) {
+			Client_Manager::revoke( $id );
+			Audit_Log::log(
+				array(
+					'method'           => 'AJAX',
+					'route'            => 'admin/oauth/revoke',
+					'action'           => 'oauth:client_revoked',
+					'status_code'      => 200,
+					'user_id'          => get_current_user_id(),
+					'ip'               => Audit_Log::client_ip(),
+					'response_summary' => 'Client OAuth #' . $id . ' revogado.',
+					'success'          => true,
+				)
+			);
+		}
+		wp_send_json_success(
+			array(
+				'clients' => $this->oauth_clients_payload(),
+				'pending' => Client_Manager::count_pending(),
+			)
+		);
 	}
 }

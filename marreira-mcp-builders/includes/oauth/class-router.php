@@ -35,6 +35,8 @@ class Router {
 	 */
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'maybe_handle' ), 1 );
+		// Limpeza diaria dos authorization codes expirados (cron ja existente).
+		add_action( 'mmcb_daily_purge', array( Code_Manager::class, 'purge_expired' ) );
 	}
 
 	/**

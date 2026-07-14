@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -152,6 +152,14 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
 
+= 1.3.0 =
+* Nova aba "Conectores" no painel: URL do servidor MCP para colar no Claude.ai/
+  ChatGPT, lista de clientes registrados com aprovar/revogar e contagem de
+  pendentes.
+* Toggles enable_oauth e oauth_auto_approve no painel (salvamento automático).
+* Novos eventos de auditoria oauth:client_approved e oauth:client_revoked.
+* Limpeza automática de authorization codes expirados no cron diário.
+
 = 1.2.0 =
 * Fluxo OAuth completo (Authorization Code + PKCE) — fecha a conexão como
   conector de IA externo (Claude.ai / ChatGPT).
@@ -217,6 +225,10 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.3.0 =
+Adiciona a aba Conectores para gerenciar as conexões OAuth (aprovar/revogar
+clientes) e copiar a URL do servidor MCP para o Claude.ai / ChatGPT.
 
 = 1.2.0 =
 Fecha o fluxo OAuth: já é possível conectar Claude.ai / ChatGPT como conector

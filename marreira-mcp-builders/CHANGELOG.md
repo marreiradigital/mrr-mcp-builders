@@ -27,6 +27,22 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.3.0] - 2026-07-14
+
+### Adicionado
+
+- **Aba "Conectores" no painel** — quarta etapa (gestão e visibilidade do OAuth):
+  - Mostra a **URL do servidor MCP** para colar no conector do Claude.ai/ChatGPT
+    (com botão copiar) e os endpoints OAuth como referência técnica.
+  - **Lista de clientes** registrados via DCR, com contagem de pendentes e botões
+    **Aprovar** / **Revogar** por cliente.
+  - Toggles **Habilitar conector OAuth** (`enable_oauth`) e **Aprovar clientes
+    automaticamente** (`oauth_auto_approve`), com salvamento automático.
+- Novos eventos no audit log: `oauth:client_approved` e `oauth:client_revoked`
+  (aprovação/revogação pelo admin).
+- **Limpeza automática** dos authorization codes expirados acoplada ao cron
+  diário existente (`mmcb_daily_purge`).
+
 ## [1.2.0] - 2026-07-14
 
 ### Adicionado
