@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -152,6 +152,16 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
 
+= 1.0.1 =
+* Correção: `/cli/exec/php` e `/cli/snippets` (criar/atualizar) retornavam erro
+  fatal `Call to undefined function wp_tempnam()` — o lint carregava `wp_tempnam()`
+  sem incluir `wp-admin/includes/file.php` no contexto REST.
+* O lint de sintaxe passa a usar `token_get_all()` com a flag `TOKEN_PARSE`
+  (parser nativo do PHP, sem executar o código), eliminando a dependência de
+  arquivo temporário e do binário `php` de CLI via `exec()` — funciona em
+  qualquer SAPI, inclusive PHP-FPM. O `php -l` fica apenas como fallback para
+  PHP < 7.0, agora com o `require_once` correto.
+
 = 1.0.0 =
 * Lançamento inicial — fusão de MarreiraMCP Bricks (0.5.2) e MarreiraMCP Elementor
   (0.1.1) em um único plugin unificado. Ambos os plugins anteriores foram congelados;
@@ -172,6 +182,10 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Corrige erro fatal em /cli/exec/php e /cli/snippets (wp_tempnam indefinido).
+Recomendado para quem usa o CLI geral com exec/php ou snippets.
 
 = 1.0.0 =
 Versão inicial do plugin unificado. Substitui MarreiraMCP Bricks e MarreiraMCP

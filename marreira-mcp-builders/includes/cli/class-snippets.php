@@ -1,6 +1,6 @@
 <?php
 /**
- * Snippets PHP: CRUD, execucao com escopo e lint via php -l.
+ * Snippets PHP: CRUD, execucao com escopo e lint de sintaxe (token_get_all).
  *
  * Portado do MRR_WP_CLI_Snippets, adaptado ao namespace/tabela deste plugin.
  * A execucao (eval) e gated pela ability "snippets" do token e pelo lint
@@ -213,7 +213,17 @@ class Snippets {
 	}
 
 	/**
-	 * Faz lint (php -l) do codigo, sem executa-lo.
+	 * Faz lint (checagem de sintaxe) do codigo, sem executa-lo.
+	 *
+	 * Usa token_get_all() com a flag TOKEN_PARSE, que roda o parser do PHP e
+	 * lanca \ParseError em erro de sintaxe SEM executar o codigo — funciona em
+	 * qualquer SAPI (inclusive PHP-FPM/CloudPanel), sem depender de wp_tempnam(),
+	 * de arquivos temporarios ou do binario `php` de CLI via exec().
+	 *
+	 * Mantem um fallback para `php -l` via exec() apenas quando TOKEN_PARSE nao
+	 * existir (PHP < 7.0), com o require de wp-admin/includes/file.php corrigido
+	 * (era a causa do fatal "Call to undefined function wp_tempnam()" que
+	 * derrubava /cli/exec/php e /cli/snippets neste contexto REST).
 	 *
 	 * @param string $code Codigo PHP.
 	 * @return array{ok:bool,error?:string}
@@ -227,6 +237,29 @@ class Snippets {
 			$code = "<?php\n" . $code;
 		}
 
+		// Caminho principal: parser do proprio PHP, sem executar nada.
+		if ( defined( 'TOKEN_PARSE' ) ) {
+			try {
+				token_get_all( $code, TOKEN_PARSE );
+				return array( 'ok' => true );
+			} catch ( \ParseError $e ) {
+				return array( 'ok' => false, 'error' => $e->getMessage() );
+			} catch ( \Throwable $e ) {
+				return array( 'ok' => false, 'error' => $e->getMessage() );
+			}
+		}
+
+		// Fallback (PHP < 7.0): `php -l` via exec, se disponivel.
+		$disabled = array_map( 'trim', explode( ',', (string) ini_get( 'disable_functions' ) ) );
+		if ( ! function_exists( 'exec' ) || in_array( 'exec', $disabled, true ) ) {
+			// Sem meio seguro de checar sintaxe: nao bloquear — a execucao ja
+			// captura \Throwable e registra o erro.
+			return array( 'ok' => true );
+		}
+
+		if ( ! function_exists( 'wp_tempnam' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
 		$tmp = wp_tempnam( 'mmcb-snippet-' );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		file_put_contents( $tmp, $code );

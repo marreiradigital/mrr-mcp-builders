@@ -27,6 +27,28 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.0.1] - 2026-07-13
+
+### Corrigido
+
+- **`/cli/exec/php` e `/cli/snippets` (criar/atualizar) davam erro fatal.**
+  O passo de lint chamava `wp_tempnam()` sem incluir
+  `wp-admin/includes/file.php`, que não é carregado no contexto de uma
+  requisição REST. Resultado: `Uncaught Error: Call to undefined function
+  Marreira\MCP_Builders\CLI\wp_tempnam()` (HTTP 500) em toda chamada dessas
+  rotas — inviabilizando a execução de PHP e o CRUD de snippets pela API.
+
+### Alterado
+
+- **Lint de sintaxe sem shell nem arquivo temporário.** `Snippets::lint()`
+  passa a usar `token_get_all( $code, TOKEN_PARSE )` — o parser nativo do PHP,
+  que lança `\ParseError` em erro de sintaxe **sem executar o código**. Isso
+  remove a dependência de `wp_tempnam()`, de I/O em disco e do binário `php` de
+  CLI via `exec()` (indisponível/instável em PHP-FPM, CloudPanel e hosts que
+  desabilitam `exec`). O caminho antigo (`php -l` via `exec`) permanece apenas
+  como fallback para PHP < 7.0, agora com o `require_once` correto e um guard
+  que não bloqueia quando `exec` está desabilitado.
+
 ## [1.0.0] - 2026-07-13
 
 ### Adicionado
@@ -154,4 +176,5 @@ seção `== Changelog ==` do `readme.txt`).
 - Seção **"Regra de ouro"** orienta a IA a usar `run_batch` para toda
   sequência de escrita.
 
+[1.0.1]: https://marreiradigital.com.br/marreira-mcp-builders
 [1.0.0]: https://marreiradigital.com.br/marreira-mcp-builders
