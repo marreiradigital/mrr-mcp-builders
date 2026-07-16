@@ -447,15 +447,7 @@ class Rest_Controller {
 	 * @return true|\WP_Error
 	 */
 	private static function require_cli_enabled() {
-		$settings = Rest_Guard::settings();
-		if ( empty( $settings['enable_general_cli'] ) ) {
-			return new \WP_Error(
-				'mmcb_cli_disabled',
-				'CLI geral de WordPress desativado nas configuracoes.',
-				array( 'status' => 403 )
-			);
-		}
-		return true;
+		return Rest_Guard::require_flag( 'enable_general_cli' );
 	}
 
 	/**

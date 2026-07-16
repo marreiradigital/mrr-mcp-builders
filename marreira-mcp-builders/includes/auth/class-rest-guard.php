@@ -202,6 +202,39 @@ class Rest_Guard {
 	}
 
 	/**
+	 * Exige que uma flag de settings (trava dupla) esteja ligada.
+	 *
+	 * Fonte unica das mensagens de trava, reusada pelas rotas /cli/* e pelas
+	 * tools MCP de CLI. Uma flag desconhecida e tratada como desligada (nega),
+	 * para nunca liberar por engano.
+	 *
+	 * @param string $flag Nome da flag em mmcb_settings.
+	 * @return true|WP_Error
+	 */
+	public static function require_flag( $flag ) {
+		$settings = self::settings();
+		if ( ! empty( $settings[ $flag ] ) ) {
+			return true;
+		}
+
+		$messages = array(
+			'enable_general_cli' => __( 'CLI geral de WordPress desativado nas configuracoes.', 'marreira-mcp-builders' ),
+			'allow_php_exec'     => __( 'Execucao de PHP desativada: ligue allow_php_exec nas configuracoes.', 'marreira-mcp-builders' ),
+			'allow_db_query'     => __( 'Queries SQL diretas desativadas: ligue allow_db_query nas configuracoes.', 'marreira-mcp-builders' ),
+			'allow_file_write'   => __( 'Escrita de arquivos desativada: ligue allow_file_write nas configuracoes.', 'marreira-mcp-builders' ),
+		);
+		$message = isset( $messages[ $flag ] )
+			? $messages[ $flag ]
+			: sprintf(
+				/* translators: %s: nome da flag de configuracao */
+				__( 'Recurso desativado nas configuracoes (%s).', 'marreira-mcp-builders' ),
+				$flag
+			);
+
+		return new WP_Error( 'mmcb_feature_disabled', $message, array( 'status' => 403 ) );
+	}
+
+	/**
 	 * HTTPS direto ou TLS terminado em proxy confiavel (MMCB_TRUST_PROXY).
 	 *
 	 * @return bool

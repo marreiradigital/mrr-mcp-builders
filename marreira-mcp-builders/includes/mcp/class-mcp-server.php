@@ -7,6 +7,7 @@
 
 namespace Marreira\MCP_Builders\MCP;
 
+use Marreira\MCP_Builders\Activator;
 use Marreira\MCP_Builders\Auth\Rest_Guard;
 use Marreira\MCP_Builders\Builders\Builder_Manager;
 use WP_REST_Request;
@@ -141,6 +142,15 @@ class MCP_Server {
 		// Tools de nucleo (batch/mapa) — registradas quando presentes (F4).
 		if ( class_exists( '\Marreira\MCP_Builders\MCP\Core_Tools' ) ) {
 			Core_Tools::register( $registry );
+		}
+
+		// Tools do CLI geral de WordPress — so quando o master switch esta ligado,
+		// para nao poluir o tools/list por padrao. A ability por-tool e a trava
+		// dupla continuam sendo conferidas no Tool_Registry::call() a cada chamada.
+		$settings = get_option( Activator::SETTINGS_OPTION, array() );
+		if ( is_array( $settings ) && ! empty( $settings['enable_general_cli'] )
+			&& class_exists( '\Marreira\MCP_Builders\MCP\CLI_Tools' ) ) {
+			CLI_Tools::register( $registry );
 		}
 
 		/**
@@ -411,12 +421,11 @@ class MCP_Server {
 				return $this->rpc_result( $id, array( 'tools' => $this->registry()->definitions() ) );
 
 			case 'tools/call':
-				// Escopo: o endpoint MCP exige a ability builder.
-				$ability = Rest_Guard::require_ability( 'builder' );
-				if ( is_wp_error( $ability ) ) {
-					return $this->rpc_error( $id, -32003, $ability->get_error_message(), 403 );
-				}
-
+				// A autorizacao e feita POR TOOL dentro do Tool_Registry::call()
+				// (ability do token + flags de trava dupla). Cobre tanto a chamada
+				// direta quanto os sub-comandos despachados pelo run_batch — que
+				// passam pelo mesmo call(). As tools de builder exigem 'builder'
+				// por padrao; as de CLI declaram a propria ability e travas.
 				$name      = isset( $params['name'] ) ? (string) $params['name'] : '';
 				$arguments = isset( $params['arguments'] ) && is_array( $params['arguments'] ) ? $params['arguments'] : array();
 

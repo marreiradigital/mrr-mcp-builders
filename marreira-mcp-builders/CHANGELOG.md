@@ -17,6 +17,32 @@ lote — que é o que se lê para decidir se atualiza.
 
 ---
 
+## [Unreleased]
+
+### Adicionado
+
+- **O CLI geral agora aparece como tools MCP.** Até aqui o CLI existia só como
+  rotas REST `/cli/*` — invisível para conectores puros (Claude.ai, ChatGPT), que
+  só chamam o que está em `tools/list` e não fazem HTTP arbitrário. Com o CLI
+  ligado (`enable_general_cli`), as operações passam a ser registradas como tools
+  MCP (`wp_list_plugins`, `wp_update_option`, `wp_create_post`, `wp_db_query`,
+  `wp_exec_php`, etc.), então a IA conectada por conector enxerga e controla
+  plugins, temas, conteúdo, banco e configuração direto pelo MCP. Cada tool
+  delega ao mesmo método REST (sem duplicar lógica) e é registrada apenas quando
+  o CLI está ligado, para não poluir o `tools/list` por padrão.
+
+### Segurança
+
+- **Autorização por-tool no `Tool_Registry`.** A checagem de ability saiu do
+  `tools/call` (que gateava tudo por `builder`) e passou para o
+  `Tool_Registry::call()`: cada tool declara a ability e as flags de trava dupla
+  que exige, e a checagem roda a cada chamada — inclusive nos sub-comandos
+  despachados pelo `run_batch`. Isso fecha o vetor de um token só-`builder` chamar
+  uma tool de CLI perigosa através do batch. Em contexto local (WP-CLI, painel),
+  sem token, a execução segue plenamente confiável. As mensagens de trava (`
+  enable_general_cli`, `allow_php_exec`, `allow_db_query`, `allow_file_write`)
+  viraram fonte única em `Rest_Guard::require_flag()`.
+
 ## [1.7.0] - 2026-07-16
 
 ### Adicionado

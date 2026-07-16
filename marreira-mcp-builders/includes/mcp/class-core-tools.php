@@ -48,7 +48,10 @@ class Core_Tools {
 				),
 				'required'   => array( 'commands' ),
 			),
-			array( __CLASS__, 'run_batch' )
+			array( __CLASS__, 'run_batch' ),
+			// Despachante: basta um token valido; cada sub-comando e gateado
+			// individualmente pelo Tool_Registry::call().
+			array( 'ability' => '' )
 		);
 
 		$registry->register(

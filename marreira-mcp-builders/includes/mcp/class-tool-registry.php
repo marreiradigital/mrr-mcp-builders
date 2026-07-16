@@ -7,6 +7,8 @@
 
 namespace Marreira\MCP_Builders\MCP;
 
+use Marreira\MCP_Builders\Auth\Rest_Guard;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -34,14 +36,20 @@ class Tool_Registry {
 	 * @param string   $description Descricao legivel para a IA.
 	 * @param array    $schema      JSON Schema do inputSchema.
 	 * @param callable $handler     Handler que recebe os argumentos e devolve o resultado.
+	 * @param array    $meta        Autorizacao da tool:
+	 *                              - 'ability'  (string) ability exigida do token. Padrao 'builder'.
+	 *                              - 'requires' (string[]) flags de settings exigidas (trava dupla),
+	 *                                 ex.: ['enable_general_cli','allow_php_exec'].
 	 * @return void
 	 */
-	public function register( $name, $description, array $schema, callable $handler ) {
+	public function register( $name, $description, array $schema, callable $handler, array $meta = array() ) {
 		$this->tools[ $name ] = array(
 			'name'        => $name,
 			'description' => $description,
 			'inputSchema' => $schema,
 			'handler'     => $handler,
+			'ability'     => isset( $meta['ability'] ) ? (string) $meta['ability'] : 'builder',
+			'requires'    => isset( $meta['requires'] ) ? (array) $meta['requires'] : array(),
 		);
 	}
 
@@ -145,11 +153,55 @@ class Tool_Registry {
 			);
 		}
 
+		$gate = self::authorize( $this->tools[ $name ] );
+		if ( is_wp_error( $gate ) ) {
+			return self::error_result( $gate->get_error_message() );
+		}
+
 		try {
 			return call_user_func( $this->tools[ $name ]['handler'], $arguments );
 		} catch ( \Throwable $e ) {
 			return self::error_result( $e->getMessage() );
 		}
+	}
+
+	/**
+	 * Autoriza a execucao de uma tool: ability do token + flags de trava dupla.
+	 *
+	 * O enforcamento vive AQUI (e nao so no tools/call) de proposito: o
+	 * run_batch despacha cada sub-comando por este mesmo call(), entao gatear
+	 * aqui fecha o vetor de um token so-builder chamar uma tool de CLI perigosa
+	 * atraves do batch. Quando nao ha token (WP-CLI local ou AJAX do painel, ja
+	 * autenticados por outra camada), a chamada e plenamente confiavel e passa.
+	 *
+	 * @param array $tool Entrada da tool (com 'ability' e 'requires').
+	 * @return true|\WP_Error
+	 */
+	private static function authorize( array $tool ) {
+		// Sem token = contexto local confiavel (WP-CLI / painel admin).
+		if ( null === Rest_Guard::current_token() ) {
+			return true;
+		}
+
+		// Ability vazia = basta um token valido (ex.: run_batch, cujos
+		// sub-comandos ja sao gateados individualmente).
+		$ability = isset( $tool['ability'] ) ? (string) $tool['ability'] : 'builder';
+		if ( '' !== $ability ) {
+			$check = Rest_Guard::require_ability( $ability );
+			if ( is_wp_error( $check ) ) {
+				return $check;
+			}
+		}
+
+		$requires = isset( $tool['requires'] ) ? (array) $tool['requires'] : array();
+		foreach ( $requires as $flag ) {
+			$flag_check = Rest_Guard::require_flag( (string) $flag );
+			if ( is_wp_error( $flag_check ) ) {
+				return $flag_check;
+			}
+		}
+
+		return true;
 	}
 
 	/**
