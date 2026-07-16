@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.7.0
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -176,6 +176,27 @@ log no painel. O primeiro acesso ao painel exige o aceite do Termo de Responsabi
 que fica registrado com usuário, data e versão do termo.
 
 == Changelog ==
+
+= 1.8.0 =
+* Novo: **o CLI geral agora aparece como tools MCP.** Com o CLI ligado
+  (`enable_general_cli`), as operações passam a aparecer no `tools/list` como
+  tools `wp_*` (wp_list_plugins, wp_create_post, wp_update_option, wp_db_query,
+  wp_exec_php...). Antes o CLI só existia como rotas REST, invisível para
+  conectores puros (Claude.ai/ChatGPT), que só chamam o que está no tools/list.
+  Agora a IA conectada por conector controla plugins, temas, conteúdo, banco e
+  configuração direto pelo MCP.
+* Novo: **CRUD de configurações (wp_options) — nova ability `options`.** É onde
+  os plugins de terceiros guardam a config (WooCommerce, Yoast, WPForms). Ler,
+  buscar por nome, escrever e remover options (segredos redigidos na leitura; as
+  options do próprio plugin são protegidas).
+* Novo: **meta privada e de terceiros.** Dá para ler e gravar `_price`, `_sku`,
+  `_stock` (WooCommerce), `_yoast_wpseo_*` e campos ACF; term meta e user meta
+  (com proteção contra escalonamento de privilégio).
+* Novo: **o CLI enxerga todos os CPTs.** Listar posts sem informar o tipo agora
+  inclui CPTs internos de plugins, e a criação aceita qualquer post type
+  registrado.
+* Segurança: a autorização das tools passou a ser conferida **por tool** (ability
+  + trava dupla), cobrindo inclusive os sub-comandos do `run_batch`.
 
 = 1.7.0 =
 * Novo: **Termo de Responsabilidade com aceite obrigatório no painel.** O primeiro
@@ -378,6 +399,11 @@ Lote de correções vindas de uma auditoria completa do plugin.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.8.0 =
+O CLI geral agora aparece como tools MCP (conectores Claude.ai/ChatGPT passam a
+enxergá-lo) e ganhou CRUD de options e meta privada, para controlar plugins de
+terceiros. Sem quebras; poderes continuam desligados de fábrica.
 
 = 1.7.0 =
 Painel repaginado com wizard guiado e Termo de Responsabilidade (aceite único no
