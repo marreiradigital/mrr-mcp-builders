@@ -126,7 +126,7 @@ class Updater {
 			'name'          => 'MarreiraMCP Builders',
 			'slug'          => $slug,
 			'version'       => $manifest['version'],
-			'author'        => '<a href="https://marreiradigital.com.br">Paulo Marreira</a>',
+			'author'        => '<a href="' . esc_url( $manifest['url'] ) . '">Paulo Marreira</a>',
 			'homepage'      => $manifest['url'],
 			'requires'      => $manifest['requires'],
 			'requires_php'  => $manifest['requires_php'],

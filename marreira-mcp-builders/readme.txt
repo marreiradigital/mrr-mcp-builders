@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -151,6 +151,11 @@ instale este no lugar.
 Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
+
+= 1.6.1 =
+* Correção: o `Author URI` também apontava para um endereço fora do ar (erro 520) — a
+  1.6.0 corrigiu só o `Plugin URI`. É o link do nome do autor na lista de plugins,
+  quebrado para todo usuário. Agora aponta para o site do plugin.
 
 = 1.6.0 =
 * Novo: **atualização pelo painel do WordPress**. O plugin não está no WordPress.org,

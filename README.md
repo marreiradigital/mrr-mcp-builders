@@ -4,7 +4,7 @@
 
 **Servidor MCP unificado para Bricks Builder e Elementor — IA cria e edita páginas nativamente, de forma segura e reversível.**
 
-[![Versão](https://img.shields.io/badge/versão-1.6.0-3a8bfd.svg)](marreira-mcp-builders/CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/versão-1.6.1-3a8bfd.svg)](marreira-mcp-builders/CHANGELOG.md)
 [![WordPress](https://img.shields.io/badge/WordPress-6.4%2B-21759b.svg)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4.svg)](https://www.php.net/)
 [![Licença](https://img.shields.io/badge/licença-GPL--2.0%2B-green.svg)](#licença)
@@ -271,7 +271,7 @@ Este plugin unifica e substitui dois plugins anteriores:
 |---|---|---|
 | MarreiraMCP Bricks | 0.5.2 | **Congelado** — sem mais atualizações |
 | MarreiraMCP Elementor | 0.1.1 | **Congelado** — sem mais atualizações |
-| **MarreiraMCP Builders** | **1.6.0** | **Ativo — sucessor oficial** |
+| **MarreiraMCP Builders** | **1.6.1** | **Ativo — sucessor oficial** |
 
 Se você usava um dos dois plugins anteriores, desative-o e instale este no lugar. A
 compatibilidade round-trip herdada de ambos é preservada neste plugin.
@@ -288,6 +288,6 @@ inclusive em projetos comerciais — mantendo os créditos ao autor original
 
 <div align="center">
 
-Feito por **[Paulo Marreira](https://marreiradigital.com.br)** · MarreiraDigital
+Feito por **[Paulo Marreira](https://marreiradigital.github.io/mrr-mcp-builders/)** · MarreiraDigital
 
 </div>

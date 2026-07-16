@@ -27,6 +27,24 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.6.1] - 2026-07-16
+
+### Corrigido
+
+- **`Author URI` também apontava para o endereço fora do ar.** A 1.6.0 corrigiu só o
+  `Plugin URI`; o `Author URI` continuou em `marreiradigital.com.br`, que responde
+  erro 520. É o link do nome do autor na lista de plugins do painel — quebrado para
+  todo usuário, e o WordPress.org também confere esse link na revisão. Agora aponta
+  para o site do plugin, junto com o `Plugin URI` e o `Update URI`.
+- O crédito do autor no `README.md` e o link do autor no modal "Ver detalhes"
+  apontavam para o mesmo endereço; o do modal passou a sair do próprio manifesto, em
+  vez de repetir a URL na mão.
+
+Nenhum link vivo do projeto aponta mais para `marreiradigital.com.br` — quando o
+servidor voltar, é só reapontar o que fizer sentido.
+
+---
+
 ## [1.6.0] - 2026-07-16
 
 ### Adicionado
