@@ -82,6 +82,11 @@ lote — que é o que se lê para decidir se atualiza.
   sistema. A inicialização roda antes do primeiro render para não piscar o tema
   errado.
 
+- **Tela de consentimento OAuth no novo design.** A tela que o Claude.ai/ChatGPT
+  abre no site para autorizar a conexão agora segue a mesma identidade do painel
+  (claro creme/terracota com escuro automático pelo sistema). Só o CSS mudou — a
+  lógica de autorização (PKCE, nonce, escopos) está intocada.
+
 - **SKILL (ambas as variantes): regra explícita de interface completa em um
   `run_batch`.** Montar/estilizar uma página inteira é o cenário clássico em que
   hosts/WAFs com rate-limit agressivo derrubam a 2ª/3ª requisição e a página fica

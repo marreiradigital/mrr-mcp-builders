@@ -216,26 +216,43 @@ class Consent {
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 	<title><?php esc_html_e( 'Autorizar acesso — MarreiraMCP', 'marreira-mcp-builders' ); ?></title>
 	<style>
+		/* Design system do plugin: claro (creme/terracota) padrão, escuro pelo sistema. */
+		:root{
+			--bg:#faf9f5;--surface:#ffffff;--surface-2:#f5f3ee;--ink:#1a1614;--muted:#6b6460;
+			--border:#e0dbd4;--accent:#c96442;--accent-2:#b55a39;--on-accent:#ffffff;
+			--danger:#b83030;--danger-border:rgba(184,48,48,.4);--danger-soft:rgba(184,48,48,.06);
+			--uri:#8c5a2b;--serif:Georgia,"Times New Roman",ui-serif,serif;
+		}
+		@media (prefers-color-scheme: dark){
+			:root{
+				--bg:#141210;--surface:#1c1917;--surface-2:#232019;--ink:#f0ede8;--muted:#9a928a;
+				--border:#2e2a26;--accent:#d47050;--accent-2:#e07d5a;--on-accent:#14100e;
+				--danger:#d4534a;--danger-border:rgba(212,83,74,.45);--danger-soft:rgba(212,83,74,.1);
+				--uri:#c9a35f;
+			}
+		}
 		*{box-sizing:border-box}
-		body{margin:0;background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;padding:16px;display:flex;min-height:100vh;align-items:center;justify-content:center}
-		.card{background:#1e293b;border:1px solid #334155;border-radius:14px;max-width:520px;width:100%;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
-		h1{font-size:1.25rem;margin:0 0 4px}
-		.sub{color:#94a3b8;font-size:.9rem;margin:0 0 18px}
-		.client{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px 14px;margin-bottom:18px;word-break:break-word;overflow-wrap:anywhere}
-		.client strong{color:#f8fafc}
-		.client .uri{color:#7dd3fc;font-size:.82rem}
+		body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;padding:16px;display:flex;min-height:100vh;align-items:center;justify-content:center}
+		.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;padding:26px;box-shadow:0 2px 6px rgba(26,22,20,.06),0 12px 28px -16px rgba(26,22,20,.2)}
+		h1{font-size:1.3rem;margin:0 0 4px;font-family:var(--serif);font-weight:700;letter-spacing:-.2px}
+		.sub{color:var(--muted);font-size:.9rem;margin:0 0 18px}
+		.client{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:18px;word-break:break-word;overflow-wrap:anywhere}
+		.client strong{color:var(--ink)}
+		.client .uri{color:var(--uri);font-size:.82rem;font-family:ui-monospace,Consolas,monospace}
 		.scopes{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px}
-		.scopes li{display:flex;gap:10px;align-items:flex-start;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 12px}
-		.scopes li.danger{border-color:#7f1d1d}
-		.scopes input{margin-top:3px;width:18px;height:18px;flex:0 0 auto}
+		.scopes li{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+		.scopes li.danger{border-color:var(--danger-border);background:var(--danger-soft)}
+		.scopes input{margin-top:3px;width:18px;height:18px;flex:0 0 auto;accent-color:var(--accent)}
 		.scopes .txt{font-size:.9rem}
-		.scopes .tag{display:inline-block;font-size:.7rem;color:#fca5a5;border:1px solid #7f1d1d;border-radius:6px;padding:1px 6px;margin-left:6px}
-		.scopes .off{color:#64748b;font-size:.75rem;margin-left:6px}
+		.scopes .tag{display:inline-block;font-size:.7rem;color:var(--danger);border:1px solid var(--danger-border);border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:700}
+		.scopes .off{color:var(--muted);font-size:.75rem;margin-left:6px}
 		.actions{display:flex;gap:10px;flex-wrap:wrap}
-		button{flex:1 1 auto;min-height:44px;border:0;border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer;padding:10px 16px}
-		.approve{background:#22c55e;color:#052e16}
-		.deny{background:#334155;color:#e2e8f0}
-		.foot{color:#64748b;font-size:.75rem;margin-top:16px;text-align:center}
+		button{flex:1 1 auto;min-height:44px;border:1px solid var(--border);border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer;padding:10px 16px}
+		button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+		.approve{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+		.approve:hover{background:var(--accent-2);border-color:var(--accent-2)}
+		.deny{background:var(--surface-2);color:var(--ink)}
+		.foot{color:var(--muted);font-size:.75rem;margin-top:16px;text-align:center}
 	</style>
 </head>
 <body>
@@ -306,9 +323,10 @@ class Consent {
 		header( 'X-Robots-Tag: noindex' );
 		echo '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>';
 		esc_html_e( 'Erro de autorização', 'marreira-mcp-builders' );
-		echo '</title></head><body style="font-family:sans-serif;background:#0f172a;color:#e2e8f0;padding:24px;max-width:520px;margin:0 auto">';
-		echo '<h1 style="font-size:1.2rem">' . esc_html__( 'Não foi possível autorizar', 'marreira-mcp-builders' ) . '</h1>';
-		echo '<p style="color:#94a3b8">' . esc_html( $message ) . '</p>';
+		echo '</title><style>:root{--bg:#faf9f5;--ink:#1a1614;--muted:#6b6460}@media (prefers-color-scheme: dark){:root{--bg:#141210;--ink:#f0ede8;--muted:#9a928a}}</style></head>';
+		echo '<body style="font-family:sans-serif;background:var(--bg);color:var(--ink);padding:24px;max-width:520px;margin:0 auto">';
+		echo '<h1 style="font-size:1.2rem;font-family:Georgia,ui-serif,serif">' . esc_html__( 'Não foi possível autorizar', 'marreira-mcp-builders' ) . '</h1>';
+		echo '<p style="color:var(--muted)">' . esc_html( $message ) . '</p>';
 		echo '</body></html>';
 		exit;
 	}
