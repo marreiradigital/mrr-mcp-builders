@@ -1,5 +1,5 @@
 {
-    "version":  "1.6.2",
+    "version":  "1.7.0",
     "package":  "https://github.com/marreiradigital/mrr-mcp-builders/releases/latest/download/marreira-mcp-builders.zip",
     "url":  "https://marreiradigital.github.io/mrr-mcp-builders/",
     "requires":  "6.4",
