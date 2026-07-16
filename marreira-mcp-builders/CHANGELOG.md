@@ -5,10 +5,21 @@ Todas as mudanças relevantes deste projeto são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
-A cada modificação, a versão é incrementada e sincronizada em quatro lugares:
-o header `Version:` e a constante `MMCB_VERSION` do arquivo principal, o
-`Stable tag:` do `readme.txt` e uma nova entrada neste arquivo (espelhada na
-seção `== Changelog ==` do `readme.txt`).
+As mudanças se acumulam em **[Unreleased]** conforme são feitas. A versão só é
+fechada quando há um lote fechado para publicar — aí a seção Unreleased vira uma
+versão datada e o número é sincronizado em quatro lugares: o header `Version:` e a
+constante `MMCB_VERSION` do arquivo principal, o `Stable tag:` do `readme.txt` e a
+entrada deste arquivo (resumida na seção `== Changelog ==` do `readme.txt`).
+
+Bumpar a cada mudança fragmentaria o changelog em entradas pobres e encheria as
+Releases de versões-ruído. Acumular deixa cada versão contar a história inteira do
+lote — que é o que se lê para decidir se atualiza.
+
+---
+
+## [Unreleased]
+
+_Nada ainda._
 
 ---
 
