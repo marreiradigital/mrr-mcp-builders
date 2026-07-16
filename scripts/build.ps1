@@ -153,3 +153,48 @@ if (Test-Path $ReadmeMd) {
 } else {
     Write-Warning "README.md nao encontrado: versao do README nao sincronizada."
 }
+
+# ---------------------------------------------------------------------------
+# Manifesto de atualizacao (docs/update.json), servido pelo GitHub Pages.
+#
+# E o que o Updater do plugin le pra saber se ha versao nova e oferecer o update
+# no wp-admin. Fica aqui, e nao na API do GitHub, porque a API limita a 60
+# requisicoes/hora POR IP sem autenticacao — em hospedagem compartilhada varios
+# sites saem pelo mesmo IP e a checagem falharia. O Pages serve por CDN, sem
+# limite.
+#
+# `package` aponta pro asset de nome FIXO da release (nao o versionado): assim
+# este arquivo nao precisa mudar de URL a cada versao, so de numero. O Updater
+# recusa qualquer package fora do prefixo das Releases deste repo.
+# ---------------------------------------------------------------------------
+$UpdateJson = Join-Path $RepoRoot 'docs/update.json'
+$DocsDir    = Join-Path $RepoRoot 'docs'
+
+if (Test-Path $DocsDir) {
+    # Le "Requires at least", "Requires PHP" e "Tested up to" das fontes que ja
+    # existem, em vez de repetir os numeros aqui.
+    $requires    = ($header | Where-Object { $_ -match '^\s*\*\s*Requires at least:\s*(.+)$' } | Select-Object -First 1) -replace '^\s*\*\s*Requires at least:\s*', ''
+    $requiresPhp = ($header | Where-Object { $_ -match '^\s*\*\s*Requires PHP:\s*(.+)$' }      | Select-Object -First 1) -replace '^\s*\*\s*Requires PHP:\s*', ''
+
+    $readmeTxt = Join-Path $PluginDir 'readme.txt'
+    $tested    = ''
+    if (Test-Path $readmeTxt) {
+        $testedLine = Get-Content $readmeTxt -TotalCount 20 | Where-Object { $_ -match '^Tested up to:\s*(.+)$' } | Select-Object -First 1
+        if ($testedLine) { $tested = ($testedLine -replace '^Tested up to:\s*', '').Trim() }
+    }
+
+    $manifest = [ordered]@{
+        version      = $version
+        package      = 'https://github.com/marreiradigital/mrr-mcp-builders/releases/latest/download/marreira-mcp-builders.zip'
+        url          = 'https://marreiradigital.github.io/mrr-mcp-builders/'
+        requires     = $requires.Trim()
+        requires_php = $requiresPhp.Trim()
+        tested       = $tested
+    }
+
+    $json = ($manifest | ConvertTo-Json -Depth 3)
+    [System.IO.File]::WriteAllText($UpdateJson, $json, (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "OK: docs/update.json gerado (v$version, WP $($manifest.requires)+, PHP $($manifest.requires_php)+)"
+} else {
+    Write-Warning "docs/ nao encontrado: update.json nao gerado."
+}

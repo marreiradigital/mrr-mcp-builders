@@ -27,6 +27,63 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.6.0] - 2026-07-16
+
+### Adicionado
+
+- **Atualização pelo painel do WordPress.** O plugin não está no WordPress.org, então
+  atualizar exigia baixar o `.zip` e reenviar pelo painel — e quem instalou não ficava
+  sabendo que saiu versão nova (inclusive correção de segurança, como as da 1.5.0).
+  Agora o wp-admin oferece "Atualizar agora" normalmente, servindo o `.zip` das
+  Releases do GitHub.
+
+  Usa o mecanismo **oficial** do núcleo para plugins hospedados fora do WordPress.org
+  (desde a WP 5.8): o header `Update URI:` declara quem manda nas atualizações e o
+  núcleo dispara o filtro `update_plugins_{hostname}`. Não há hack de
+  `pre_set_site_transient_update_plugins`. De quebra, o `Update URI` impede que um
+  plugin homônimo publicado no WordPress.org sequestre a atualização deste — que é
+  exatamente o motivo pelo qual o header existe.
+
+  A checagem lê um manifesto (`update.json`) no próprio site do plugin, gerado pelo
+  build a partir do header, e **não** a API do GitHub: a API limita a 60 requisições
+  por hora **por IP** sem autenticação, e em hospedagem compartilhada vários sites
+  saem pelo mesmo IP — a checagem falharia justo em quem mais precisa. O manifesto é
+  servido por CDN, sem limite, e fica 12h em cache no site.
+
+- **Link "Checar atualização"** nas ações do plugin, na lista de plugins. O manifesto
+  fica 12h em cache; sem isso não havia como pedir uma checagem imediata depois de sair
+  uma versão. Descarta o cache do plugin e o do núcleo, recheca na hora e informa o
+  resultado.
+
+- **A coluna "Atualizações automáticas" do WordPress passa a funcionar** para este
+  plugin (é a nativa do núcleo, não um controle próprio — um controle próprio não
+  gravaria na option `auto_update_plugins` do WordPress). Ela só aparece para plugin
+  que o núcleo considere atualizável, e para isso o filtro precisa devolver o payload
+  **sempre**, inclusive quando não há versão nova: quem compara as versões e decide
+  entre "há atualização" e "sem atualização, mas suportado" é o próprio núcleo.
+  Retornar `false` quando está tudo em dia tira o plugin dos dois casos e a tela passa
+  a dizer que atualizações automáticas não estão disponíveis.
+
+### Segurança
+
+- O manifesto diz **o que** instalar, mas não **de onde**: o `package` é recusado se
+  não vier das Releases deste repositório (prefixo fixo no código). Sem essa trava, um
+  comprometimento do site que serve o JSON viraria execução de código arbitrário em
+  todo site que tem o plugin instalado.
+
+### Corrigido
+
+- **`Plugin URI` apontava para um endereço fora do ar.** O header apontava para
+  `marreiradigital.com.br`, que responde erro 520 (a Cloudflare alcança o servidor de
+  origem mas recebe resposta inválida) — ou seja, o link "Visitar site do plugin" que
+  todo usuário vê no painel estava quebrado, e o WordPress.org exige esse link
+  funcionando na revisão. Agora aponta para o site do plugin, que é a documentação
+  pública dele. O `Author URI` segue no domínio próprio.
+- Os links de versão do `CHANGELOG.md` apontavam para o mesmo endereço fora do ar;
+  agora vão para a tag da release correspondente.
+
+---
+
 ## [1.5.1] - 2026-07-16
 
 Segundo lote da auditoria: os achados menores que ficaram de fora da 1.5.0.
@@ -505,5 +562,9 @@ MCP/CLI e drivers de builder).
 - Seção **"Regra de ouro"** orienta a IA a usar `run_batch` para toda
   sequência de escrita.
 
-[1.0.1]: https://marreiradigital.com.br/marreira-mcp-builders
-[1.0.0]: https://marreiradigital.com.br/marreira-mcp-builders
+[1.5.1]: https://github.com/marreiradigital/mrr-mcp-builders/releases/tag/v1.5.1
+[1.5.0]: https://github.com/marreiradigital/mrr-mcp-builders/releases/tag/v1.5.0
+[1.4.0]: https://github.com/marreiradigital/mrr-mcp-builders/releases/tag/v1.4.0
+[1.3.1]: https://github.com/marreiradigital/mrr-mcp-builders/releases/tag/v1.3.1
+[1.0.1]: https://github.com/marreiradigital/mrr-mcp-builders/releases/tag/v1.0.1
+[1.0.0]: https://github.com/marreiradigital/mrr-mcp-builders/releases/tag/v1.0.0

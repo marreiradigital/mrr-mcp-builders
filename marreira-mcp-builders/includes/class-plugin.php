@@ -69,6 +69,18 @@ final class Plugin {
 		// Audit log (F1): hook de rest_post_dispatch + cron de retencao.
 		Audit_Log::init();
 
+		// Atualizacao pelo painel servindo o zip das Releases do GitHub (o plugin
+		// nao esta no WordPress.org). Usa o header `Update URI` + o filtro
+		// update_plugins_{host} do proprio nucleo.
+		//
+		// NAO gatear com is_admin(): wp_update_plugins() tambem roda no cron
+		// (evento wp_update_plugins), onde is_admin() e false. Sem o filtro
+		// registrado ali, o cron gravaria "sem atualizacao" no transient e o
+		// admin_init nao recheca enquanto o transient estiver fresco — a
+		// atualizacao sumiria da tela por ate 12h. Os hooks de UI de dentro do
+		// Updater ja so disparam no admin por natureza.
+		Updater::init();
+
 		// Servidor MCP (F3): rotas /mcp, /skill, /describe + dispatch JSON-RPC.
 		( new MCP_Server() )->register_hooks();
 

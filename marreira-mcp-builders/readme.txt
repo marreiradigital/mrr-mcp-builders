@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -151,6 +151,21 @@ instale este no lugar.
 Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
+
+= 1.6.0 =
+* Novo: **atualização pelo painel do WordPress**. O plugin não está no WordPress.org,
+  então atualizar exigia baixar o zip e reenviar — e ninguém ficava sabendo que saiu
+  versão nova (inclusive correção de segurança). Agora o wp-admin oferece "Atualizar
+  agora", servindo o zip das Releases do GitHub. Usa o mecanismo oficial do núcleo
+  (header `Update URI` + filtro `update_plugins_{host}`, desde a WP 5.8).
+* Novo: link **"Checar atualização"** na lista de plugins, para uma checagem imediata
+  (o manifesto fica 12h em cache).
+* Novo: a coluna **"Atualizações automáticas"** do WordPress passa a funcionar para
+  este plugin.
+* Segurança: o manifesto de atualização só pode apontar o zip para as Releases deste
+  repositório — o que instalar é dele, de onde baixar não.
+* Correção: `Plugin URI` apontava para um endereço fora do ar (erro 520), deixando
+  quebrado o link "Visitar site do plugin" que aparece no painel de todo usuário.
 
 = 1.5.1 =
 Segundo lote da auditoria — os achados menores que ficaram de fora da 1.5.0.

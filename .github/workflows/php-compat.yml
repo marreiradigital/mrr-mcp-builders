@@ -73,3 +73,46 @@ jobs:
           fi
 
           echo "OK: Requires PHP sincronizado em $floor."
+
+      # O nome do filtro que o nucleo dispara traz o HOST do `Update URI` do
+      # header. A classe Updater precisa registrar exatamente esse filtro, e por
+      # isso repete a URI numa constante (ler o header em runtime custaria
+      # carregar wp-admin/includes/plugin.php em toda requisicao). Se os dois
+      # divergirem, o filtro nunca dispara e o plugin para de oferecer
+      # atualizacao — sem erro, so silencio. Este job trava a igualdade.
+      - name: Confere Update URI do header contra a constante do Updater
+        run: |
+          set -euo pipefail
+
+          header="$(grep -oP '^\s*\*\s*Update URI:\s*\K\S+' marreira-mcp-builders/marreira-mcp-builders.php)"
+          const="$(grep -oP "const UPDATE_URI\s*=\s*'\K[^']+" marreira-mcp-builders/includes/class-updater.php)"
+
+          echo "header do plugin:      $header"
+          echo "Updater::UPDATE_URI:   $const"
+
+          if [ "$header" != "$const" ]; then
+            echo "::error::Update URI dessincronizado. Header=$header Updater::UPDATE_URI=$const. Se divergirem, o filtro update_plugins_{host} nunca dispara e a atualizacao para de ser oferecida sem nenhum erro."
+            exit 1
+          fi
+
+          echo "OK: Update URI sincronizado em $header."
+
+      # O manifesto e gerado pelo build a partir do header. Se alguem commitar um
+      # bump sem rodar o build, o update.json fica anunciando a versao velha e
+      # ninguem recebe a atualizacao nova.
+      - name: Confere update.json contra a versao do plugin
+        run: |
+          set -euo pipefail
+
+          version="$(grep -oP '^\s*\*\s*Version:\s*\K\S+' marreira-mcp-builders/marreira-mcp-builders.php)"
+          manifest="$(grep -oP '"version"\s*:\s*"\K[^"]+' docs/update.json)"
+
+          echo "versao do plugin:  $version"
+          echo "docs/update.json:  $manifest"
+
+          if [ "$version" != "$manifest" ]; then
+            echo "::error::docs/update.json esta em $manifest e o plugin em $version. Rode 'powershell -File scripts/build.ps1' e commite o update.json junto com o bump."
+            exit 1
+          fi
+
+          echo "OK: update.json em $version."
