@@ -293,6 +293,16 @@ class CLI_Tools {
 				'props' => array( 'per_page' => 'integer:Itens.', 'page' => 'integer:Pagina.', 'role' => 'string:Filtrar por papel.', 'search' => 'string:Busca.' ),
 			),
 			array(
+				'name' => 'wp_get_user', 'cb' => 'get_user', 'http' => 'GET', 'ability' => 'read',
+				'description' => 'Retorna um usuario com sua meta (campos ACF/preferencias). Sessoes e segredos sao redigidos.',
+				'props' => array( 'id' => 'integer:ID do usuario.' ), 'required' => array( 'id' ),
+			),
+			array(
+				'name' => 'wp_set_user_meta', 'cb' => 'set_user_meta', 'http' => 'POST', 'ability' => 'options',
+				'description' => 'Grava uma user meta (ex.: campo ACF de usuario). Chaves de capabilities/nivel/sessao sao bloqueadas (sem escalonamento de privilegio).',
+				'props' => array( 'id' => 'integer:ID do usuario.', 'meta_key' => 'string:Chave.', 'meta_value' => ':Valor (qualquer tipo JSON).' ), 'required' => array( 'id', 'meta_key', 'meta_value' ),
+			),
+			array(
 				'name' => 'wp_get_logs', 'cb' => 'list_logs', 'http' => 'GET', 'ability' => 'read',
 				'description' => 'Retorna o audit log paginado das requisicoes ao plugin.',
 				'props' => array( 'per_page' => 'integer:Itens.', 'page' => 'integer:Pagina.' ),

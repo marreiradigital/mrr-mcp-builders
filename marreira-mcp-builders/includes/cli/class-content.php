@@ -24,7 +24,17 @@ class Content {
 	/*  Posts                                                               */
 	/* ------------------------------------------------------------------ */
 
-	private static function post_to_array( \WP_Post $post, bool $full = false ): array {
+	/**
+	 * Chaves de meta (post/term) cujo VALOR e redigido na leitura por serem
+	 * potencialmente sensiveis (segredos guardados por plugins).
+	 *
+	 * @var string[]
+	 */
+	private const REDACTED_META_PATTERNS = array(
+		'password', 'secret', 'private_key', 'api_key', 'apikey', 'access_token', 'session_tokens',
+	);
+
+	private static function post_to_array( \WP_Post $post, bool $full = false, bool $include_private = false ): array {
 		$out = array(
 			'id'             => $post->ID,
 			'type'           => $post->post_type,
@@ -44,9 +54,24 @@ class Content {
 			$out['content']  = $post->post_content;
 			$out['template'] = get_page_template_slug( $post ) ?: null;
 			$out['terms']    = self::collect_terms( $post );
-			$out['meta']     = self::collect_safe_meta( $post->ID );
+			$out['meta']     = self::collect_meta( $post->ID, $include_private );
 		}
 		return $out;
+	}
+
+	/**
+	 * Indica se uma chave de meta deve ter o valor redigido na leitura.
+	 *
+	 * @param string $key Chave.
+	 * @return bool
+	 */
+	private static function is_sensitive_meta( string $key ): bool {
+		foreach ( self::REDACTED_META_PATTERNS as $p ) {
+			if ( false !== stripos( $key, $p ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static function collect_terms( \WP_Post $post ): array {
@@ -64,12 +89,24 @@ class Content {
 		return $out;
 	}
 
-	private static function collect_safe_meta( int $post_id ): array {
+	/**
+	 * Coleta a meta de um post. Por padrao pula chaves privadas (prefixo _);
+	 * com $include_private, inclui-as (ex.: _price, _sku, _yoast_wpseo_*, ACF),
+	 * redigindo apenas as de nome sensivel.
+	 *
+	 * @param int  $post_id         ID do post.
+	 * @param bool $include_private Incluir chaves com prefixo _.
+	 * @return array
+	 */
+	private static function collect_meta( int $post_id, bool $include_private = false ): array {
 		$all = get_post_meta( $post_id );
 		$out = array();
 		foreach ( $all as $key => $values ) {
-			// Pula campos privados (comecam com _) por padrao.
-			if ( str_starts_with( $key, '_' ) ) {
+			if ( ! $include_private && str_starts_with( $key, '_' ) ) {
+				continue;
+			}
+			if ( self::is_sensitive_meta( $key ) ) {
+				$out[ $key ] = '[REDACTED]';
 				continue;
 			}
 			$out[ $key ] = count( $values ) === 1 ? maybe_unserialize( $values[0] ) : array_map( 'maybe_unserialize', $values );
@@ -78,8 +115,15 @@ class Content {
 	}
 
 	public static function list_posts( array $args ): array {
+		// Sem "type", lista TODOS os tipos registrados (inclusive CPTs de
+		// terceiros marcados como nao-pesquisaveis, que o 'any' do WP_Query
+		// deixaria de fora).
+		$type = ( isset( $args['type'] ) && '' !== $args['type'] )
+			? $args['type']
+			: array_values( get_post_types( array(), 'names' ) );
+
 		$query_args = array(
-			'post_type'      => $args['type'] ?? 'any',
+			'post_type'      => $type,
 			'post_status'    => $args['status'] ?? 'any',
 			'posts_per_page' => max( 1, min( 100, (int) ( $args['per_page'] ?? 20 ) ) ),
 			'paged'          => max( 1, (int) ( $args['page'] ?? 1 ) ),
@@ -111,20 +155,22 @@ class Content {
 	}
 
 	/** @return array|\WP_Error */
-	public static function get_post( int $id ) {
+	public static function get_post( int $id, bool $include_private = false ) {
 		$post = get_post( $id );
 		if ( ! $post instanceof \WP_Post ) {
 			return new \WP_Error( 'mmcb_not_found', 'Post não encontrado.', array( 'status' => 404 ) );
 		}
-		return self::post_to_array( $post, true );
+		return self::post_to_array( $post, true, $include_private );
 	}
 
 	/** @return array|\WP_Error */
 	public static function create_post( array $data ) {
-		$allowed_types = array_keys( get_post_types( array( 'show_ui' => true ), 'names' ) );
-		$type          = sanitize_key( (string) ( $data['type'] ?? 'post' ) );
-		if ( ! in_array( $type, $allowed_types, true ) && ! in_array( $type, array( 'post', 'page' ), true ) ) {
-			return new \WP_Error( 'mmcb_bad_type', 'Tipo de post não permitido.', array( 'status' => 400 ) );
+		// Aceita qualquer post type REGISTRADO (inclusive CPTs de terceiros com
+		// show_ui=false). Antes so permitia show_ui=true, o que barrava CPTs
+		// internos de plugins.
+		$type = sanitize_key( (string) ( $data['type'] ?? 'post' ) );
+		if ( ! post_type_exists( $type ) ) {
+			return new \WP_Error( 'mmcb_bad_type', 'Post type não registrado: ' . $type, array( 'status' => 400 ) );
 		}
 
 		$args = array(
@@ -231,11 +277,13 @@ class Content {
 	}
 
 	private static function apply_meta( int $post_id, array $meta ): void {
-		// Bloqueia chaves perigosas / privadas.
+		// Permite chaves privadas (_price, _sku, _yoast_wpseo_*, ACF...), que os
+		// plugins de terceiros usam. Bloqueia apenas as gerenciadas pelo proprio
+		// WP (lock de edicao), que nao fazem sentido escrever pela API.
 		$blocked = array( '_edit_lock', '_edit_last' );
 		foreach ( $meta as $key => $value ) {
 			$key = (string) $key;
-			if ( str_starts_with( $key, '_' ) || in_array( $key, $blocked, true ) ) {
+			if ( '' === $key || in_array( $key, $blocked, true ) ) {
 				continue;
 			}
 			update_post_meta( $post_id, $key, $value );
@@ -302,9 +350,47 @@ class Content {
 				'count'       => (int) $t->count,
 				'parent'      => (int) $t->parent,
 				'taxonomy'    => $t->taxonomy,
+				'meta'        => self::collect_term_meta( (int) $t->term_id ),
 			);
 		}
 		return array( 'terms' => $out, 'total' => count( $out ) );
+	}
+
+	/**
+	 * Coleta a meta de um termo (ex.: thumbnail_id de categoria WooCommerce),
+	 * redigindo chaves sensiveis.
+	 *
+	 * @param int $term_id ID do termo.
+	 * @return array
+	 */
+	private static function collect_term_meta( int $term_id ): array {
+		$all = get_term_meta( $term_id );
+		$out = array();
+		foreach ( (array) $all as $key => $values ) {
+			if ( self::is_sensitive_meta( (string) $key ) ) {
+				$out[ $key ] = '[REDACTED]';
+				continue;
+			}
+			$out[ $key ] = count( $values ) === 1 ? maybe_unserialize( $values[0] ) : array_map( 'maybe_unserialize', $values );
+		}
+		return $out;
+	}
+
+	/**
+	 * Aplica meta a um termo. Aceita chaves privadas (usadas por plugins).
+	 *
+	 * @param int   $term_id ID do termo.
+	 * @param array $meta    Mapa meta_key => valor.
+	 * @return void
+	 */
+	private static function apply_term_meta( int $term_id, array $meta ): void {
+		foreach ( $meta as $key => $value ) {
+			$key = (string) $key;
+			if ( '' === $key ) {
+				continue;
+			}
+			update_term_meta( $term_id, $key, $value );
+		}
 	}
 
 	/** @return array|\WP_Error */
@@ -325,6 +411,9 @@ class Content {
 		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
+		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
+			self::apply_term_meta( (int) $res['term_id'], $data['meta'] );
+		}
 		return array( 'id' => (int) $res['term_id'], 'taxonomy' => $tax );
 	}
 
@@ -342,6 +431,9 @@ class Content {
 		) );
 		if ( is_wp_error( $res ) ) {
 			return $res;
+		}
+		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
+			self::apply_term_meta( $id, $data['meta'] );
 		}
 		return array( 'id' => $id, 'updated' => true );
 	}

@@ -21,6 +21,20 @@ lote — que é o que se lê para decidir se atualiza.
 
 ### Adicionado
 
+- **Meta privada e de terceiros no CLI de conteúdo.** A escrita de meta deixou de
+  ignorar chaves com prefixo `_` — agora dá para gravar `_price`, `_sku`,
+  `_stock` (WooCommerce), `_yoast_wpseo_*` e campos ACF. Na leitura de post,
+  `include_private=true` traz essas chaves (segredos redigidos). Termos passam a
+  expor e aceitar **term meta** (ex.: imagem de categoria WooCommerce). Novas
+  rotas/tools `wp_get_user` (usuário com meta, sessões/segredos redigidos) e
+  `wp_set_user_meta` (com self-protection contra escrever capabilities/nível/
+  sessão — sem escalonamento de privilégio).
+
+- **CLI de conteúdo enxerga todos os CPTs.** `wp_list_posts` sem `type` passa a
+  listar todos os post types registrados (inclusive CPTs não-pesquisáveis de
+  plugins, que o `any` do WordPress deixava de fora), e a criação aceita qualquer
+  post type registrado (antes travava em `show_ui=true`, barrando CPTs internos).
+
 - **CRUD de `wp_options` no CLI (nova ability `options`).** A maior lacuna para
   controlar plugins de terceiros: eles guardam a configuração em `wp_options`
   (`woocommerce_*`, Yoast, WPForms…) e, até aqui, o CLI só lia isso via SELECT ou

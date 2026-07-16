@@ -270,6 +270,20 @@ class Rest_Controller {
 			'show_in_index'       => false,
 		) );
 
+		register_rest_route( $ns, '/cli/users/(?P<id>\d+)', array(
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => array( __CLASS__, 'get_user' ),
+			'permission_callback' => Rest_Guard::ability_gate( 'read' ),
+			'show_in_index'       => false,
+		) );
+
+		register_rest_route( $ns, '/cli/users/(?P<id>\d+)/meta', array(
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => array( __CLASS__, 'set_user_meta' ),
+			'permission_callback' => Rest_Guard::ability_gate( 'options' ),
+			'show_in_index'       => false,
+		) );
+
 		/* ---------- Logs ---------- */
 
 		register_rest_route( $ns, '/cli/logs', array(
@@ -1468,6 +1482,85 @@ class Rest_Controller {
 		return rest_ensure_response( array( 'users' => $out ) );
 	}
 
+	/**
+	 * Padroes de user meta cujo valor e redigido na leitura (segredos/sessoes).
+	 *
+	 * @var string[]
+	 */
+	private const REDACTED_USER_META = array(
+		'session_tokens', 'user_activation_key', 'password', 'secret', 'api_key', 'access_token',
+	);
+
+	/**
+	 * GET /cli/users/{id} — retorna um usuario com meta (redigindo sensiveis).
+	 *
+	 * @param \WP_REST_Request $r Requisicao.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function get_user( \WP_REST_Request $r ) {
+		$check = self::require_cli_enabled();
+		if ( is_wp_error( $check ) ) { return $check; }
+
+		$user = get_user_by( 'id', (int) $r['id'] );
+		if ( ! $user instanceof \WP_User ) {
+			return new \WP_Error( 'mmcb_not_found', 'Usuario nao encontrado.', array( 'status' => 404 ) );
+		}
+
+		$meta = array();
+		foreach ( (array) get_user_meta( $user->ID ) as $key => $values ) {
+			$redact = false;
+			foreach ( self::REDACTED_USER_META as $p ) {
+				if ( false !== stripos( (string) $key, $p ) ) { $redact = true; break; }
+			}
+			$meta[ $key ] = $redact ? '[REDACTED]'
+				: ( count( $values ) === 1 ? maybe_unserialize( $values[0] ) : array_map( 'maybe_unserialize', $values ) );
+		}
+
+		return rest_ensure_response( array(
+			'id'           => (int) $user->ID,
+			'login'        => $user->user_login,
+			'email'        => $user->user_email,
+			'name'         => $user->display_name,
+			'roles'        => $user->roles,
+			'registered'   => $user->user_registered,
+			'meta'         => $meta,
+		) );
+	}
+
+	/**
+	 * POST /cli/users/{id}/meta — grava user meta.
+	 *
+	 * Self-protection contra escalonamento de privilegio: nao permite escrever
+	 * as chaves de capabilities/nivel/sessao (senao a IA se tornaria admin ou
+	 * sequestraria sessoes).
+	 *
+	 * @param \WP_REST_Request $r Requisicao.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function set_user_meta( \WP_REST_Request $r ) {
+		$check = self::require_cli_enabled();
+		if ( is_wp_error( $check ) ) { return $check; }
+
+		$user = get_user_by( 'id', (int) $r['id'] );
+		if ( ! $user instanceof \WP_User ) {
+			return new \WP_Error( 'mmcb_not_found', 'Usuario nao encontrado.', array( 'status' => 404 ) );
+		}
+
+		$body = $r->get_json_params() ?: $r->get_params();
+		$key  = isset( $body['meta_key'] ) ? (string) $body['meta_key'] : '';
+		if ( '' === trim( $key ) || ! array_key_exists( 'meta_value', $body ) ) {
+			return new \WP_Error( 'mmcb_bad_request', 'meta_key e meta_value sao obrigatorios.', array( 'status' => 400 ) );
+		}
+
+		$low = strtolower( $key );
+		if ( false !== strpos( $low, 'capabilities' ) || false !== strpos( $low, 'user_level' ) || false !== strpos( $low, 'session_tokens' ) ) {
+			return new \WP_Error( 'mmcb_self_protection', 'Esta chave controla privilegios/sessao e nao pode ser escrita pelo CLI (use gestao de papeis).', array( 'status' => 403 ) );
+		}
+
+		update_user_meta( $user->ID, $key, $body['meta_value'] );
+		return rest_ensure_response( array( 'id' => (int) $user->ID, 'meta_key' => $key, 'updated' => true ) );
+	}
+
 	/* ------------------------------------------------------------------ */
 	/*  Logs                                                                */
 	/* ------------------------------------------------------------------ */
@@ -1565,7 +1658,8 @@ class Rest_Controller {
 	public static function get_post( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
-		$res = Content::get_post( (int) $r['id'] );
+		$include_private = (bool) $r->get_param( 'include_private' );
+		$res = Content::get_post( (int) $r['id'], $include_private );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
