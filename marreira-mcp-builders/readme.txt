@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.6.2
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -176,6 +176,27 @@ log no painel. O primeiro acesso ao painel exige o aceite do Termo de Responsabi
 que fica registrado com usuário, data e versão do termo.
 
 == Changelog ==
+
+= 1.7.0 =
+* Novo: **Termo de Responsabilidade com aceite obrigatório no painel.** O primeiro
+  acesso pede o aceite, que fica registrado com usuário, data, IP e versão do termo.
+  Quem já usa o plugin vê a tela uma única vez após atualizar — os endpoints MCP
+  continuam funcionando normalmente durante isso.
+* Novo: **wizard guiado ramificado.** Configuração passo a passo do zero ao autoteste:
+  termo → builder → tier de IA → escolha da conexão (token manual para Claude Code,
+  Cursor, VS Code e afins, ou conector OAuth para Claude.ai/ChatGPT), com URLs e um
+  bloco de instruções prontos para copiar e colar na IA. O botão "Rever guia" reabre
+  o assistente a qualquer momento.
+* Novo: **visual repaginado.** Tema claro creme/terracota como padrão e modo escuro
+  automático (com toggle no painel) — no painel, na tela de autorização OAuth e no
+  site da documentação.
+* Novo: **skill dinâmica.** `GET /skill` agora entrega o documento com as URLs reais
+  do seu site: a IA só precisa da URL da skill, todos os endpoints vão listados nela
+  com o domínio certo. O `/describe` também passou a listar os quatro endpoints, com
+  a skill primeiro.
+* Melhoria: a skill instrui explicitamente a montar interfaces completas em um único
+  `run_batch`, evitando o bloqueio por rate-limit de hosts durante a estilização.
+* Docs: nova seção "Aviso Legal" nesta página.
 
 = 1.6.2 =
 * Correção: clientes MCP com validação estrita (ex.: Claude Code) conectavam mas não
@@ -357,6 +378,10 @@ Lote de correções vindas de uma auditoria completa do plugin.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.7.0 =
+Painel repaginado com wizard guiado e Termo de Responsabilidade (aceite único no
+próximo acesso). A skill agora sai com as URLs reais do site. Sem quebras.
 
 = 1.3.1 =
 Correções no fluxo OAuth (PKCE antes de consumir o code, 405 no authorize) e

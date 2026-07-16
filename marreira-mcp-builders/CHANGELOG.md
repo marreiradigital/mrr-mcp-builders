@@ -17,7 +17,7 @@ lote — que é o que se lê para decidir se atualiza.
 
 ---
 
-## [Unreleased]
+## [1.7.0] - 2026-07-16
 
 ### Adicionado
 
