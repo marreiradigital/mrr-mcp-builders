@@ -23,6 +23,44 @@ _Nada ainda._
 
 ---
 
+## [1.6.2] - 2026-07-16
+
+### Corrigido
+
+- **Clientes MCP com validação estrita não carregavam nenhuma tool.** As tools sem
+  argumentos declaravam `inputSchema.properties` como array vazio do PHP, e o
+  `json_encode` não tem como adivinhar que aquele `array()` queria ser objeto: saía
+  `[]`. O JSON Schema exige que `properties` seja um **objeto**, então clientes que
+  validam de verdade — o **Claude Code**, por exemplo — recusavam o `tools/list`
+  **inteiro**. O sintoma enganava: o servidor conectava (`Connected`), mas nenhuma
+  das tools ficava disponível (`expected record, received array`).
+
+  Eram **11 tools**, não 6: `list_global_classes`, `list_color_palette`,
+  `get_theme_styles`, `list_fonts`, `get_capabilities` e `list_elements` no driver
+  Bricks, mais `get_capabilities`, `get_kit_settings`, `list_elements`,
+  `list_global_colors` e `list_global_fonts` no Elementor. E o `/describe` sofria do
+  mesmo problema, não só o `tools/list`.
+
+  A normalização ficou em `Tool_Registry::definitions()` — o ponto único de saída do
+  catálogo, que alimenta `tools/list`, `/describe`, o painel e o WP-CLI. Ficar ali, e
+  não nos helpers `schema()` de cada driver, faz valer para qualquer tool, registrada
+  pelo helper do driver, inline pelo núcleo ou por um driver futuro. A recursão é
+  ciente de schema (desce só em `properties` e `items`), então também cobre objetos
+  aninhados e não estraga uma propriedade que por acaso se chame `properties`.
+
+  Reportado por [@HermesMacedo](https://github.com/HermesMacedo) em
+  [#1](https://github.com/marreiradigital/mrr-mcp-builders/issues/1), com
+  diagnóstico e patch — obrigado.
+
+### Documentação
+
+- `README.md` ganhou uma seção **Problemas comuns**, com o sintoma acima e com a
+  dica (também do #1) sobre hosts **LiteSpeed** que aplicam throttle por user-agent:
+  o handshake do Claude Code pode levar 429 antes de a requisição chegar ao plugin, e
+  registrar o MCP com um `User-Agent` próprio resolve.
+
+---
+
 > **MarreiraMCP Builders** é a fusão dos plugins anteriores
 > **MarreiraMCP Bricks** (última versão: 0.5.2) e
 > **MarreiraMCP Elementor** (última versão: 0.1.1) em um único plugin.

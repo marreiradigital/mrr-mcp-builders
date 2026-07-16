@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.6.1
+Stable tag: 1.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -151,6 +151,15 @@ instale este no lugar.
 Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
+
+= 1.6.2 =
+* Correção: clientes MCP com validação estrita (ex.: Claude Code) conectavam mas não
+  carregavam nenhuma tool. As 11 tools sem argumentos declaravam `properties` como
+  array vazio (`[]`) em vez de objeto (`{}`), e o JSON Schema exige objeto — então o
+  catálogo inteiro era recusado. Afetava `tools/list` e `/describe`, nos dois builders.
+  Reportado por @HermesMacedo (#1).
+* Docs: nova seção "Problemas comuns" no README, incluindo a dica sobre hosts
+  LiteSpeed que aplicam throttle por user-agent e podem retornar 429 durante a conexão.
 
 = 1.6.1 =
 * Correção: o `Author URI` também apontava para um endereço fora do ar (erro 520) — a

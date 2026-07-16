@@ -4,7 +4,7 @@
 
 **Servidor MCP unificado para Bricks Builder e Elementor — IA cria e edita páginas nativamente, de forma segura e reversível.**
 
-[![Versão](https://img.shields.io/badge/versão-1.6.1-3a8bfd.svg)](marreira-mcp-builders/CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/versão-1.6.2-3a8bfd.svg)](marreira-mcp-builders/CHANGELOG.md)
 [![WordPress](https://img.shields.io/badge/WordPress-6.4%2B-21759b.svg)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4.svg)](https://www.php.net/)
 [![Licença](https://img.shields.io/badge/licença-GPL--2.0%2B-green.svg)](#licença)
@@ -263,6 +263,44 @@ Nunca sobrescreve uma árvore às cegas. Isso garante que:
 
 ---
 
+## Problemas comuns
+
+### O cliente conecta mas nenhuma tool aparece
+
+Atualize para a **1.6.2 ou superior**. Até a 1.6.1, as tools sem argumentos
+declaravam `inputSchema.properties` como array vazio (`[]`) em vez de objeto
+(`{}`), e clientes com validação estrita de JSON Schema — como o **Claude Code** —
+recusavam o `tools/list` inteiro:
+
+```
+Status: ! Connected · tools fetch failed
+Issue: Invalid input: expected record, received array (at tools.15.inputSchema.properties)
+```
+
+### 429 / bloqueio temporário durante a conexão (LiteSpeed)
+
+Relatado em hosts **LiteSpeed** com throttle por *user-agent*: o handshake do
+Claude Code (`initialize` + `GET` + `tools/list` em sequência) usa o user-agent
+`claude-code/x.y.z (external, cli)` e pode levar 429 — às vezes com bloqueio de
+1 hora. Não é o plugin recusando: a requisição não chega nele.
+
+Registrar o MCP com um user-agent próprio resolve:
+
+```bash
+claude mcp add --transport http meusite https://SEU-SITE/wp-json/marreira-mcp/v1/mcp \
+  --header "Authorization: Bearer <seu-token>" \
+  --header "User-Agent: meusite-mcp/1.0"
+```
+
+Se o bloqueio já aconteceu, ele costuma expirar sozinho. Vale também checar as
+regras de bot/UA do host antes de culpar o plugin — o audit log só registra o que
+chegou até ele.
+
+_Obrigado ao [@HermesMacedo](https://github.com/HermesMacedo) por reportar os dois
+([#1](https://github.com/marreiradigital/mrr-mcp-builders/issues/1))._
+
+---
+
 ## Linhagem
 
 Este plugin unifica e substitui dois plugins anteriores:
@@ -271,7 +309,7 @@ Este plugin unifica e substitui dois plugins anteriores:
 |---|---|---|
 | MarreiraMCP Bricks | 0.5.2 | **Congelado** — sem mais atualizações |
 | MarreiraMCP Elementor | 0.1.1 | **Congelado** — sem mais atualizações |
-| **MarreiraMCP Builders** | **1.6.1** | **Ativo — sucessor oficial** |
+| **MarreiraMCP Builders** | **1.6.2** | **Ativo — sucessor oficial** |
 
 Se você usava um dos dois plugins anteriores, desative-o e instale este no lugar. A
 compatibilidade round-trip herdada de ambos é preservada neste plugin.

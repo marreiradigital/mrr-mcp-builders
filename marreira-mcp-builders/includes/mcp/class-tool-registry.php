@@ -56,10 +56,56 @@ class Tool_Registry {
 			$out[] = array(
 				'name'        => $tool['name'],
 				'description' => $tool['description'],
-				'inputSchema' => $tool['inputSchema'],
+				'inputSchema' => self::normalize_schema( $tool['inputSchema'] ),
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Deixa um JSON Schema pronto pra serializar sem mentir sobre o tipo.
+	 *
+	 * O JSON Schema exige que `properties` seja um OBJETO. Em PHP, um schema sem
+	 * argumentos nasce como `'properties' => array()`, e o json_encode nao tem
+	 * como saber que aquele array vazio queria ser objeto: serializa como `[]`.
+	 * Client MCP com validacao estrita (Claude Code, por exemplo) recusa o
+	 * `tools/list` INTEIRO por causa disso — o servidor conecta e nenhuma tool
+	 * fica disponivel ("expected record, received array"). Um `stdClass` vazio
+	 * serializa como `{}` e resolve.
+	 *
+	 * A normalizacao fica aqui, no unico ponto de saida do catalogo (alimenta
+	 * tools/list, /describe, o painel e o WP-CLI), e nao nos helpers schema() de
+	 * cada driver: assim vale pra qualquer tool, tenha ela sido registrada pelo
+	 * helper do driver, inline pelo nucleo ou por um driver futuro.
+	 *
+	 * A recursao e ciente de schema — desce so em `properties` (cujos valores sao
+	 * schemas) e em `items` — em vez de procurar a chave 'properties' em qualquer
+	 * lugar. Uma propriedade legitimamente CHAMADA "properties" continua
+	 * intocada.
+	 *
+	 * @param mixed $schema JSON Schema (ou sub-schema).
+	 * @return mixed
+	 */
+	private static function normalize_schema( $schema ) {
+		if ( ! is_array( $schema ) ) {
+			return $schema;
+		}
+
+		if ( array_key_exists( 'properties', $schema ) ) {
+			if ( array() === $schema['properties'] ) {
+				$schema['properties'] = new \stdClass();
+			} elseif ( is_array( $schema['properties'] ) ) {
+				foreach ( $schema['properties'] as $name => $sub_schema ) {
+					$schema['properties'][ $name ] = self::normalize_schema( $sub_schema );
+				}
+			}
+		}
+
+		if ( isset( $schema['items'] ) ) {
+			$schema['items'] = self::normalize_schema( $schema['items'] );
+		}
+
+		return $schema;
 	}
 
 	/**
