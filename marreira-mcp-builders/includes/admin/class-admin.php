@@ -497,17 +497,31 @@ class Admin {
 	 */
 	private function oauth_clients_payload() {
 		$out = array();
+
+		// Estado de CONEXAO vem dos tokens, nao da tabela de clients: o client so
+		// sabe de registro (pendente/aprovado/revogado). Sem isto o painel nao
+		// tinha como dizer se o conector chegou a conectar — a aba se chamava
+		// "Clientes conectados" e nao mostrava conexao nenhuma.
+		$conns = Token_Manager::oauth_connections();
+
 		foreach ( Client_Manager::list_all() as $c ) {
-			$uris  = json_decode( (string) $c['redirect_uris'], true );
+			$uris = json_decode( (string) $c['redirect_uris'], true );
+			$cid  = (string) $c['client_id'];
+			$conn = isset( $conns[ $cid ] ) ? $conns[ $cid ] : null;
+
 			$out[] = array(
 				'id'            => (int) $c['id'],
-				'client_id'     => (string) $c['client_id'],
+				'client_id'     => $cid,
 				'client_name'   => (string) $c['client_name'],
 				'redirect_uris' => is_array( $uris ) ? $uris : array(),
 				'status'        => (string) $c['status'],
 				'reg_ip'        => (string) $c['reg_ip'],
 				'created_at'    => (string) $c['created_at'],
 				'approved_at'   => (string) $c['approved_at'],
+				'connected'     => $conn ? (bool) $conn['connected'] : false,
+				'last_used_at'  => $conn ? $conn['last_used_at'] : null,
+				'token_expires' => $conn ? $conn['expires_at'] : null,
+				'ever_issued'   => $conn ? ( $conn['tokens'] > 0 ) : false,
 			);
 		}
 		return $out;

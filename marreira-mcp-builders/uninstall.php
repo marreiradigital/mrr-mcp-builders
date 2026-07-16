@@ -16,11 +16,15 @@ global $wpdb;
 delete_option( 'mmcb_settings' );
 delete_option( 'mmcb_db_version' );
 
-// Tabelas do plugin.
+// Tabelas do plugin. Precisa listar TODAS — as duas de OAuth ficaram de fora
+// quando foram criadas (1.3.x) e sobreviviam a desinstalacao, guardando
+// client_ids, redirect_uris e IPs de registro no banco pra sempre.
 $mmcb_tables = array(
 	$wpdb->prefix . 'mmcb_tokens',
 	$wpdb->prefix . 'mmcb_logs',
 	$wpdb->prefix . 'mmcb_snippets',
+	$wpdb->prefix . 'mmcb_oauth_clients',
+	$wpdb->prefix . 'mmcb_oauth_codes',
 );
 
 foreach ( $mmcb_tables as $mmcb_table ) {

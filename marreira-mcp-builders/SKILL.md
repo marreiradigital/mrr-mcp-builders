@@ -146,6 +146,20 @@ ativar `enable_general_cli` no painel, e os poderes perigosos (`exec/php`,
 `db/query`, escrita de arquivo) têm trava dupla (flag + ability do token). Cada
 rota exige a ability correspondente. Consulte `GET /cli/describe`.
 
+**Restrições que valem a pena saber antes de chamar:**
+
+- **`db/query` só aceita SELECT/SHOW/DESCRIBE/EXPLAIN, e não aceita comentários
+  SQL** (`--`, `#`, `/* */`). O motivo é de segurança: o MySQL executa comentários
+  versionados (`/*!... */`), então eles são recusados de saída. Passe valores por
+  placeholder (`%s`/`%d` + `args`) em vez de embutir. Uma instrução por chamada;
+  sem `LIMIT`, é aplicado `LIMIT 1000`.
+- **Ativar um snippet exige a configuração `allow_php_exec` ligada**, além da
+  ability `snippets`. Um snippet ativo executa PHP em toda requisição do site —
+  é execução de PHP tanto quanto `/cli/exec/php`, então usa a mesma flag. Criar,
+  ler, editar e apagar snippet **inativo** exige apenas a ability `snippets`. Se
+  `allow_php_exec` estiver desligado, ativar retorna `403 mmcb_php_exec_disabled`:
+  peça ao dono para ligar a flag no painel em vez de tentar outro caminho.
+
 ---
 
 ## 8. Endpoints (referência completa)

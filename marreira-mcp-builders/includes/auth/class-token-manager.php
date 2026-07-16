@@ -340,9 +340,86 @@ class Token_Manager {
 	public static function list_tokens() {
 		global $wpdb;
 		$table = Activator::table_tokens();
+		// LIMIT porque cada rotacao de refresh OAuth insere uma linha nova (um
+		// conector ativo gera ~24/dia); sem teto, o payload do painel cresceria
+		// sem limite. source/oauth_client_id vao junto para o painel conseguir
+		// distinguir token estatico de token de conector.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $wpdb->get_results( "SELECT id, name, prefix, abilities, status, created_by, expires_at, last_used_at, last_used_ip, created_at FROM {$table} ORDER BY id DESC", ARRAY_A );
+		$rows = $wpdb->get_results( "SELECT id, name, prefix, abilities, status, source, oauth_client_id, created_by, expires_at, last_used_at, last_used_ip, created_at FROM {$table} ORDER BY id DESC LIMIT 200", ARRAY_A );
 		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Estado de conexao de cada client OAuth, derivado dos tokens emitidos.
+	 *
+	 * A tabela de clients so sabe de registro (pending/approved/revoked) — quem
+	 * sabe se o conector chegou a conectar, e quando ele falou com o site pela
+	 * ultima vez, e a tabela de tokens. Sem isto o painel nao tem como mostrar
+	 * "conectado".
+	 *
+	 * @return array<string,array{connected:bool,last_used_at:?string,expires_at:?string,tokens:int}>
+	 *         Indexado por oauth_client_id.
+	 */
+	public static function oauth_connections() {
+		global $wpdb;
+		$table = Activator::table_tokens();
+		$now   = gmdate( 'Y-m-d H:i:s' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT oauth_client_id,
+					SUM( status = 'active' AND ( expires_at IS NULL OR expires_at > %s ) ) AS live,
+					COUNT(*) AS tokens,
+					MAX( last_used_at ) AS last_used_at,
+					MAX( CASE WHEN status = 'active' THEN expires_at END ) AS expires_at
+				FROM {$table}
+				WHERE source = 'oauth' AND oauth_client_id IS NOT NULL
+				GROUP BY oauth_client_id",
+				$now
+			),
+			ARRAY_A
+		);
+
+		$out = array();
+		foreach ( (array) $rows as $row ) {
+			$out[ (string) $row['oauth_client_id'] ] = array(
+				'connected'    => ( (int) $row['live'] ) > 0,
+				'last_used_at' => $row['last_used_at'] ? (string) $row['last_used_at'] : null,
+				'expires_at'   => $row['expires_at'] ? (string) $row['expires_at'] : null,
+				'tokens'       => (int) $row['tokens'],
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * Remove tokens OAuth mortos (revogados/rotacionados) apos um periodo de
+	 * carencia. Roda no cron diario.
+	 *
+	 * Cada rotacao de refresh revoga a linha antiga e insere uma nova, entao um
+	 * conector ativo deixa ~24 linhas mortas por dia. O purge diario limpava
+	 * authorization codes e logs, mas nunca os tokens — a tabela crescia pra
+	 * sempre e a aba Tokens do painel enchia de "OAuth: ..." revogados.
+	 *
+	 * So apaga linha que ja nao serve pra nada: source='oauth', status != active
+	 * e access token expirado ha mais de 7 dias (carencia pra o admin ainda ver
+	 * a conexao recente no painel).
+	 *
+	 * @return int Linhas removidas.
+	 */
+	public static function purge_dead_oauth() {
+		global $wpdb;
+		$table  = Activator::table_tokens();
+		$cutoff = gmdate( 'Y-m-d H:i:s', time() - ( 7 * DAY_IN_SECONDS ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$table} WHERE source = 'oauth' AND status <> 'active' AND expires_at IS NOT NULL AND expires_at < %s",
+				$cutoff
+			)
+		);
 	}
 
 	/**

@@ -45,3 +45,8 @@ enxuta para poupar contexto. Um site = um builder; veja os nomes exatos em
 - Escrita é round-trip-safe (preserva IDs/campos desconhecidos).
 - Guard anti-RCE pode recusar código; evite `{echo:`/`{do_action:`/`<script>`.
 - CLI geral de WP existe em `/cli/...` mas vem desligado (veja `/cli/describe`).
+- `db/query`: só SELECT/SHOW/DESCRIBE/EXPLAIN, 1 instrução, sem comentários SQL
+  (`--`, `#`, `/* */`). Valores por placeholder (`%s` + `args`). `LIMIT 1000` padrão.
+- Ativar snippet exige a flag `allow_php_exec` (snippet ativo roda PHP em todo
+  request), além da ability `snippets`. CRUD de snippet inativo não exige. Sem a
+  flag, ativar retorna `403 mmcb_php_exec_disabled`.

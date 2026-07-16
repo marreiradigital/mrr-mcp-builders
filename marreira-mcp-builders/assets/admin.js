@@ -673,6 +673,24 @@
 		return badge( 'is-warn', '▲ pendente' );
 	}
 
+	// Conexão != registro. O status do client diz se ele pode conectar; esta
+	// coluna diz se ele CONECTOU (token vivo emitido) e quando falou com o site
+	// pela última vez. Antes a aba só mostrava registro e nunca dizia "conectado".
+	function connectionCell( c ) {
+		if ( c.connected ) {
+			return badge( 'is-on', '● conectado' ) +
+				'<br><span class="mmcb-hint" style="font-size:11px">último uso: ' + esc( fmtDate( c.last_used_at ) ) + '</span>';
+		}
+		if ( c.status === 'revoked' ) {
+			return badge( 'is-off', '○ acesso revogado' );
+		}
+		if ( c.ever_issued ) {
+			return badge( 'is-warn', '○ desconectado' ) +
+				'<br><span class="mmcb-hint" style="font-size:11px">último uso: ' + esc( fmtDate( c.last_used_at ) ) + '</span>';
+		}
+		return '<span class="mmcb-hint">nunca conectou</span>';
+	}
+
 	function clientsTable( clients ) {
 		if ( ! clients || ! clients.length ) {
 			return '<p class="mmcb-hint" style="margin-top:12px">Nenhum cliente registrado ainda. Ao adicionar o conector no Claude.ai/ChatGPT, ele aparece aqui para aprovação.</p>';
@@ -690,12 +708,13 @@
 				'<td>' + esc( c.client_name || '—' ) + '<br><code class="mmcb-mono" style="font-size:11px">' + esc( c.client_id ) + '</code></td>' +
 				'<td class="mmcb-mono" style="font-size:11px;max-width:260px;overflow-wrap:anywhere">' + uris + '</td>' +
 				'<td>' + clientStatusBadge( c.status ) + '</td>' +
+				'<td>' + connectionCell( c ) + '</td>' +
 				'<td>' + esc( fmtDate( c.created_at ) ) + '</td>' +
 				'<td>' + ( actions || '—' ) + '</td>' +
 			'</tr>';
 		} ).join( '' );
 		return '<div class="mmcb-table-wrap"><table class="mmcb-table">' +
-			'<thead><tr><th>Cliente</th><th>Redirect URIs</th><th>Status</th><th>Registrado</th><th>Ações</th></tr></thead>' +
+			'<thead><tr><th>Cliente</th><th>Redirect URIs</th><th>Registro</th><th>Conexão</th><th>Criado</th><th>Ações</th></tr></thead>' +
 			'<tbody>' + rows + '</tbody></table></div>';
 	}
 

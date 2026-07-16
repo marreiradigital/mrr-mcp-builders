@@ -8,6 +8,7 @@
 namespace Marreira\MCP_Builders\OAuth;
 
 use Marreira\MCP_Builders\Activator;
+use Marreira\MCP_Builders\Auth\Token_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -37,6 +38,10 @@ class Router {
 		add_action( 'init', array( __CLASS__, 'maybe_handle' ), 1 );
 		// Limpeza diaria dos authorization codes expirados (cron ja existente).
 		add_action( 'mmcb_daily_purge', array( Code_Manager::class, 'purge_expired' ) );
+		// ...e dos tokens OAuth mortos. Cada rotacao de refresh revoga a linha
+		// antiga e insere uma nova (~24/dia por conector ativo); sem este purge a
+		// tabela de tokens crescia pra sempre.
+		add_action( 'mmcb_daily_purge', array( Token_Manager::class, 'purge_dead_oauth' ) );
 	}
 
 	/**

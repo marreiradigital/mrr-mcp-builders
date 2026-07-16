@@ -108,7 +108,7 @@ class Consent {
 						'success'          => false,
 					)
 				);
-				wp_redirect( add_query_arg( array_filter( array( 'error' => 'access_denied', 'state' => $state ) ), $redirect_uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
+				wp_redirect( add_query_arg( self::present( array( 'error' => 'access_denied', 'state' => $state ) ), $redirect_uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 				exit;
 			}
 
@@ -139,12 +139,33 @@ class Consent {
 				)
 			);
 
-			wp_redirect( add_query_arg( array_filter( array( 'code' => $code, 'state' => $state ) ), $redirect_uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
+			wp_redirect( add_query_arg( self::present( array( 'code' => $code, 'state' => $state ) ), $redirect_uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 			exit;
 		}
 
 		// 4) GET = renderiza a tela de consentimento.
 		self::render_form( $client, $redirect_uri, $scope, $state, $code_challenge, $cc_method, $requested, $settings );
+	}
+
+	/**
+	 * Remove do array so o que nao foi enviado (string vazia / null), mantendo
+	 * valores "falsy" que sao legitimos.
+	 *
+	 * Existe porque array_filter() sem callback descarta '0', e a RFC 6749 §4.1.2
+	 * exige devolver o state EXATAMENTE como veio: um cliente que usasse state='0'
+	 * recebia o redirect sem state, achava que era CSRF e abortava a conexao — com
+	 * o admin tendo autorizado normalmente.
+	 *
+	 * @param array $args Pares chave => valor.
+	 * @return array
+	 */
+	private static function present( array $args ) {
+		return array_filter(
+			$args,
+			static function ( $value ) {
+				return null !== $value && '' !== $value;
+			}
+		);
 	}
 
 	/**

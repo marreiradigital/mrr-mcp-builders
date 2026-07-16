@@ -74,6 +74,28 @@ MCP/CLI e drivers de builder).
   quando o `REMOTE_ADDR` é um deles. O valor `true` mantém o comportamento antigo
   (com a validação de formato), para não quebrar quem já usa.
 
+- **Ativar um snippet contornava a flag `allow_php_exec`.** Um snippet ativo executa
+  PHP em toda requisição do site — é execução de PHP tanto quanto `/cli/exec/php`,
+  mas exigia apenas `enable_general_cli` + ability `snippets`. Um token restrito a
+  `snippets` (sem `exec`) rodava o que quisesse com `allow_php_exec` desligado, que
+  é justamente a flag pela qual o admin diz "não quero execução de PHP". Ativar
+  (via create, update ou toggle) agora exige `allow_php_exec`. Criar, ler, editar e
+  apagar snippet **inativo** seguem exigindo só a ability `snippets`, e snippets já
+  ativos continuam rodando.
+- **Throttle não contava falha de token revogado/expirado.** Só as etapas de formato
+  inválido e hash não encontrado incrementavam, então dava para sondar tokens
+  conhecidos sem nunca gastar o limite de 20 tentativas.
+
+### Adicionado
+
+- **A aba Conectores passa a mostrar conexão de verdade.** A tela se chamava
+  "Clientes conectados" e mostrava apenas o status de *registro*
+  (pendente/aprovado/revogado) — nunca dizia se o app chegou a conectar. Registro e
+  conexão são coisas diferentes: quem sabe da conexão é a tabela de tokens, e nada
+  ligava as duas. Agora cada conector mostra **conectado / desconectado / nunca
+  conectou / acesso revogado** e a data do último uso, derivados dos tokens OAuth
+  emitidos para aquele `client_id`.
+
 ### Corrigido
 
 - **`/cli/db/query` executava um SQL diferente do pedido, devolvendo dados errados
@@ -93,6 +115,20 @@ MCP/CLI e drivers de builder).
 - **Detecção de `LIMIT` deixou de cair em literal.** `WHERE t = 'limit 5'` fazia o
   `LIMIT` parecer presente e a query voltava sem teto de 1000 linhas. A checagem
   agora usa o probe.
+- **`state='0'` era descartado do redirect do OAuth.** `array_filter()` sem callback
+  remove valores falsy, e `'0'` é falsy em PHP. A RFC 6749 §4.1.2 exige devolver o
+  `state` exatamente como veio: um cliente que usasse `state='0'` recebia o redirect
+  sem `state`, concluía que era CSRF e abortava — com o admin tendo autorizado.
+- **`uninstall.php` deixava as tabelas OAuth no banco.** Só apagava `mmcb_tokens`,
+  `mmcb_logs` e `mmcb_snippets`; `mmcb_oauth_clients` e `mmcb_oauth_codes` (criadas
+  na 1.3.x) sobreviviam à desinstalação com client_ids, redirect_uris e IPs de
+  registro.
+- **Tokens OAuth acumulavam para sempre.** Cada rotação de refresh revoga a linha
+  antiga e insere uma nova (~24/dia por conector ativo), mas o cron diário limpava
+  só authorization codes e logs. Agora o purge diário também remove tokens OAuth
+  mortos (revogados e com o access token expirado há mais de 7 dias — a carência
+  mantém a conexão recente visível no painel), e `list_tokens()` ganhou `LIMIT` para
+  o payload do painel não crescer sem teto.
 
 ---
 

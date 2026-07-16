@@ -458,6 +458,33 @@ class Rest_Controller {
 		return true;
 	}
 
+	/**
+	 * Exige allow_php_exec para ATIVAR um snippet.
+	 *
+	 * Um snippet ativo roda PHP arbitrario em toda requisicao do WordPress — e
+	 * execucao de PHP tanto quanto o /cli/exec/php, so que por outra porta. Sem
+	 * esta trava, um token com a ability `snippets` (e sem `exec`) criava um
+	 * snippet com active=1 e executava o que quisesse, mesmo com allow_php_exec
+	 * desligado: a flag que o admin usa justamente para dizer "nao quero execucao
+	 * de PHP" era contornada.
+	 *
+	 * Vale so para a ativacao: criar, ler, editar e apagar snippet inativo
+	 * seguem exigindo apenas a ability `snippets`.
+	 *
+	 * @return true|\WP_Error
+	 */
+	private static function require_php_exec_to_activate() {
+		$settings = Rest_Guard::settings();
+		if ( empty( $settings['allow_php_exec'] ) ) {
+			return new \WP_Error(
+				'mmcb_php_exec_disabled',
+				'Ativar um snippet exige a configuracao allow_php_exec ligada: snippet ativo executa PHP em toda requisicao.',
+				array( 'status' => 403 )
+			);
+		}
+		return true;
+	}
+
 	/* ------------------------------------------------------------------ */
 	/*  Filesystem / admin includes                                         */
 	/* ------------------------------------------------------------------ */
@@ -1307,6 +1334,10 @@ class Rest_Controller {
 		if ( is_wp_error( $check ) ) { return $check; }
 
 		$data = $r->get_json_params() ?: $r->get_params();
+		if ( ! empty( $data['active'] ) ) {
+			$gate = self::require_php_exec_to_activate();
+			if ( is_wp_error( $gate ) ) { return $gate; }
+		}
 		if ( ! empty( $data['code'] ) ) {
 			$lint = Snippets::lint( (string) $data['code'] );
 			if ( ! $lint['ok'] ) {
@@ -1329,6 +1360,10 @@ class Rest_Controller {
 
 		$id   = (int) $r['id'];
 		$data = $r->get_json_params() ?: $r->get_params();
+		if ( ! empty( $data['active'] ) ) {
+			$gate = self::require_php_exec_to_activate();
+			if ( is_wp_error( $gate ) ) { return $gate; }
+		}
 		if ( ! empty( $data['code'] ) ) {
 			$lint = Snippets::lint( (string) $data['code'] );
 			if ( ! $lint['ok'] ) {
@@ -1367,7 +1402,12 @@ class Rest_Controller {
 		if ( ! $row ) {
 			return new \WP_Error( 'mmcb_not_found', 'Snippet não encontrado.', array( 'status' => 404 ) );
 		}
-		Snippets::update( (int) $row['id'], array( 'active' => empty( $row['active'] ) ? 1 : 0 ) );
+		$turning_on = empty( $row['active'] );
+		if ( $turning_on ) {
+			$gate = self::require_php_exec_to_activate();
+			if ( is_wp_error( $gate ) ) { return $gate; }
+		}
+		Snippets::update( (int) $row['id'], array( 'active' => $turning_on ? 1 : 0 ) );
 		return rest_ensure_response( Snippets::get( (int) $row['id'] ) );
 	}
 

@@ -174,6 +174,19 @@ Lote de correções vindas de uma auditoria completa do plugin.
 * `/cli/db/query` agora recusa comentários SQL: o MySQL executa comentários
   versionados (`/*!...*/`), o que contornaria as checagens de keyword.
 * Detecção de `LIMIT` não cai mais em literal (`WHERE t = 'limit 5'`).
+* Segurança: ativar um snippet passa a exigir a flag `allow_php_exec` — snippet ativo
+  executa PHP em toda requisição, e antes bastava a ability `snippets`. CRUD de
+  snippet inativo não mudou, e snippets já ativos continuam rodando.
+* Segurança: o throttle passa a contar falha de token revogado/expirado.
+* Novo: a aba Conectores mostra **conexão** (conectado / desconectado / nunca
+  conectou / acesso revogado) e a data do último uso — antes só mostrava o status de
+  registro e nunca dizia se o app tinha realmente conectado.
+* Correção: `state='0'` era descartado do redirect OAuth (`array_filter` remove falsy),
+  violando a RFC 6749 e fazendo o conector abortar por suspeita de CSRF.
+* Correção: `uninstall.php` não apagava as tabelas `mmcb_oauth_clients` e
+  `mmcb_oauth_codes`.
+* Correção: tokens OAuth acumulavam sem limpeza (cada renovação insere uma linha). O
+  purge diário agora remove os mortos e a listagem do painel ganhou limite.
 
 = 1.4.0 =
 * Correção: erro fatal na ativação em PHP anterior a 8.2 ("Cannot use 'true' as

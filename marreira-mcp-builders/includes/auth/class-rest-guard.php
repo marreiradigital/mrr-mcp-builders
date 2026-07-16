@@ -106,11 +106,19 @@ class Rest_Guard {
 			return new WP_Error( 'mmcb_invalid_token', __( 'Token invalido.', 'marreira-mcp-builders' ), array( 'status' => 401 ) );
 		}
 
-		// 6) Status e expiracao.
+		// 6) Status e expiracao. Contam como falha no throttle igual as etapas
+		//    anteriores: token revogado/expirado e credencial invalida do mesmo
+		//    jeito, e nao incrementar deixava o pipeline assimetrico (dava pra
+		//    sondar tokens conhecidos sem nunca gastar o limite).
 		if ( 'active' !== $row['status'] ) {
+			set_transient( $throttle_key, $failures + 1, 5 * MINUTE_IN_SECONDS );
 			return new WP_Error( 'mmcb_token_revoked', __( 'Token revogado.', 'marreira-mcp-builders' ), array( 'status' => 401 ) );
 		}
+		// expires_at e gravado com gmdate (UTC) e o WordPress forca o fuso do PHP
+		// pra UTC (wp-settings.php), entao strtotime interpreta em UTC e a
+		// comparacao com time() esta correta.
 		if ( ! empty( $row['expires_at'] ) && strtotime( $row['expires_at'] ) < time() ) {
+			set_transient( $throttle_key, $failures + 1, 5 * MINUTE_IN_SECONDS );
 			return new WP_Error( 'mmcb_token_expired', __( 'Token expirado.', 'marreira-mcp-builders' ), array( 'status' => 401 ) );
 		}
 
