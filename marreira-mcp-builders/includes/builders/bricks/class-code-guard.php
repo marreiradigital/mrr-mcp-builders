@@ -186,11 +186,20 @@ class Code_Guard {
 	/**
 	 * Inspeciona page settings.
 	 *
+	 * Ao contrario do elemento "code", NAO depende do toggle anti-RCE: os
+	 * customScripts* nao tem etapa de assinatura que os segure. O elemento "code"
+	 * pode ser liberado com o toggle porque entra inerte (sem `signature`, o
+	 * Bricks nao executa ate o humano assinar no editor); um customScriptsHeader
+	 * e injetado no <head> e executa no primeiro carregamento da pagina. Com o
+	 * early-return no toggle, desligar o anti-RCE pra permitir elemento de codigo
+	 * abria, de brinde, injecao de <script> direto no site. Mesmo principio que o
+	 * inspect_elements() ja aplica aos elementos que nao sao "code".
+	 *
 	 * @param array $page_settings Page settings.
 	 * @return true|WP_Error
 	 */
 	public static function inspect_page_settings( $page_settings ) {
-		if ( ! self::is_blocking() || ! is_array( $page_settings ) ) {
+		if ( ! is_array( $page_settings ) ) {
 			return true;
 		}
 

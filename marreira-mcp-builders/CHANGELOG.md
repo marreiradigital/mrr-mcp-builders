@@ -52,6 +52,16 @@ MCP/CLI e drivers de builder).
 - **Troca `code` → token não checava o status do client.** Entre o consentimento e a
   troca cabem até 60s (TTL do code) — tempo de sobra para revogar o conector no
   painel e o token ser emitido mesmo assim. O `/token` agora confere o client.
+- **Bricks: desligar o anti-RCE liberava injeção de `<script>` no site.**
+  `Code_Guard::inspect_page_settings()` (Bricks) saía sem inspecionar nada quando
+  `block_code` estava desligado, deixando passar `customScriptsHeader` /
+  `customScriptsBodyHeader` / `customScriptsBodyFooter` e `customCss` perigoso —
+  que o Bricks injeta no `<head>` e executa no primeiro carregamento. O toggle
+  existe para liberar o **elemento `code`**, que entra inerte (sem `signature`, o
+  Bricks não executa até um humano assinar no editor); os `customScripts*` não têm
+  etapa de assinatura nenhuma. Agora page settings são sempre inspecionadas,
+  independente do toggle — igual ao driver do Elementor, que já fazia assim, e
+  igual ao que `inspect_elements()` já aplicava aos elementos não-`code`.
 
 ### Corrigido
 

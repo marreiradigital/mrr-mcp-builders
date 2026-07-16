@@ -162,6 +162,11 @@ Lote de correções vindas de uma auditoria completa do plugin.
   refiltra pelas settings atuais.
 * Segurança: a rotação passa a revalidar que o dono do token ainda é administrador.
 * Segurança: a troca de `code` por token agora confere se o client segue aprovado.
+* Segurança (Bricks): desligar o bloqueio anti-RCE (para permitir o elemento Code,
+  que entra inerte e exige assinatura manual) também desativava, sem querer, a
+  checagem das page settings — liberando `customScriptsHeader` e afins, que o
+  Bricks injeta no `<head>` e executa sem nenhuma assinatura. Page settings agora
+  são sempre inspecionadas, como o driver do Elementor já fazia.
 * Correção grave: `/cli/db/query` executava um SQL diferente do pedido. As strings
   literais eram esvaziadas para análise e a versão esvaziada é que era executada —
   `WHERE post_status = 'publish'` virava `= ''`. Toda query com literal voltava
