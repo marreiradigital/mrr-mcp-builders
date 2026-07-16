@@ -4,11 +4,13 @@
 
 **Servidor MCP unificado para Bricks Builder e Elementor — IA cria e edita páginas nativamente, de forma segura e reversível.**
 
-[![Versão](https://img.shields.io/badge/versão-1.0.0-3a8bfd.svg)](marreira-mcp-builders/CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/versão-1.5.1-3a8bfd.svg)](marreira-mcp-builders/CHANGELOG.md)
 [![WordPress](https://img.shields.io/badge/WordPress-6.4%2B-21759b.svg)](https://wordpress.org/)
-[![PHP](https://img.shields.io/badge/PHP-8.0%2B-777bb4.svg)](https://www.php.net/)
+[![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4.svg)](https://www.php.net/)
 [![Licença](https://img.shields.io/badge/licença-GPL--2.0%2B-green.svg)](#licença)
 [![MCP](https://img.shields.io/badge/protocolo-MCP%20JSON--RPC%202.0-7b5cff.svg)](https://modelcontextprotocol.io/)
+
+**[⬇️ Baixar a última versão (.zip)](https://github.com/marreiradigital/mrr-mcp-builders/releases/latest)** · [Changelog](marreira-mcp-builders/CHANGELOG.md) · [Site](https://marreiradigital.github.io/mrr-mcp-builders/)
 
 </div>
 
@@ -49,7 +51,7 @@ vez** (escolhido no onboarding); a troca é feita no painel a qualquer momento.
 ## Requisitos
 
 - WordPress **6.4+**
-- PHP **8.0+**
+- PHP **7.4+** (testado em 7.4, 8.0, 8.1, 8.3 e 8.4 a cada push)
 - **Bricks Builder** ou **Elementor** ativo (um dos dois)
 - **HTTPS** no site (obrigatório)
 - Um **cliente MCP** para consumir o servidor (ex.: Claude Desktop, Cursor)
@@ -58,8 +60,9 @@ vez** (escolhido no onboarding); a troca é feita no painel a qualquer momento.
 
 ## Instalação rápida
 
-1. Copie a pasta `marreira-mcp-builders/` para `wp-content/plugins/` (ou instale o
-   `.zip` pelo painel do WordPress).
+1. Baixe o `.zip` da **[última release](https://github.com/marreiradigital/mrr-mcp-builders/releases/latest)**
+   e instale em **Plugins → Adicionar novo → Enviar plugin** (ou copie a pasta
+   `marreira-mcp-builders/` para `wp-content/plugins/`).
 2. Ative em **Plugins**.
 3. Acesse **MarreiraMCP Builders** no menu admin.
 4. Siga o **wizard de onboarding**:
@@ -268,7 +271,7 @@ Este plugin unifica e substitui dois plugins anteriores:
 |---|---|---|
 | MarreiraMCP Bricks | 0.5.2 | **Congelado** — sem mais atualizações |
 | MarreiraMCP Elementor | 0.1.1 | **Congelado** — sem mais atualizações |
-| **MarreiraMCP Builders** | **1.0.0** | **Ativo — sucessor oficial** |
+| **MarreiraMCP Builders** | **1.5.1** | **Ativo — sucessor oficial** |
 
 Se você usava um dos dois plugins anteriores, desative-o e instale este no lugar. A
 compatibilidade round-trip herdada de ambos é preservada neste plugin.

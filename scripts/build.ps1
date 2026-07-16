@@ -119,3 +119,37 @@ if (Test-Path $IndexHtml) {
 } else {
     Write-Warning "docs/index.html nao encontrado: versao do site nao sincronizada."
 }
+
+# ---------------------------------------------------------------------------
+# Mesma ideia para o README.md do GitHub, que tambem cita a versao na mao (badge
+# do shields e tabela de linhagem). Ele ja tinha ficado parado na 1.0.0 enquanto
+# o plugin estava na 1.3.1, e o badge de PHP ainda dizia 8.0 depois de o piso
+# descer pra 7.4.
+#
+# O badge do README escreve "versao" acentuado. Esse caractere e montado com
+# [char]0xE3, nunca cru no fonte: ver a nota sobre .ps1 sem BOM no bloco do
+# docs/index.html acima. O site usa a forma url-encoded (%C3%A3), entao os dois
+# formatos entram na alternancia.
+# ---------------------------------------------------------------------------
+$ReadmeMd = Join-Path $RepoRoot 'README.md'
+
+if (Test-Path $ReadmeMd) {
+    $semver = '\d+\.\d+\.\d+'
+    $atil   = [char]0xE3   # a com til, do texto "versao" do badge
+    $md     = [System.IO.File]::ReadAllText($ReadmeMd)
+    $before = $md
+
+    # Badge de versao do shields.io (forma acentuada e forma url-encoded).
+    $md = $md -replace "(badge/vers%C3%A3o-|badge/vers${atil}o-)$semver(-)", "`${1}$version`${2}"
+    # Linha do plugin na tabela de linhagem: | **MarreiraMCP Builders** | **x.y.z** |
+    $md = $md -replace "(\*\*MarreiraMCP Builders\*\*\s*\|\s*\*\*)$semver(\*\*)", "`${1}$version`${2}"
+
+    if ($md -ne $before) {
+        [System.IO.File]::WriteAllText($ReadmeMd, $md, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Host "OK: README.md sincronizado para v$version"
+    } else {
+        Write-Host "README.md ja estava em v$version"
+    }
+} else {
+    Write-Warning "README.md nao encontrado: versao do README nao sincronizada."
+}
