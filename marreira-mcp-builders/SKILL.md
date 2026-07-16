@@ -12,6 +12,11 @@ antes de chamar.
 
 ## 1. Conexão
 
+> **As URLs abaixo já vêm com o domínio real do site.** O servidor substitui o
+> placeholder em runtime ao servir este documento — você não precisa que ninguém
+> dite os endpoints: a URL desta skill basta, e a seção 8 lista a referência
+> completa de todos os endpoints já resolvidos.
+
 - **Endpoint MCP:** `https://SEU-SITE/wp-json/marreira-mcp/v1/mcp`
 - **Método:** `POST` (JSON-RPC 2.0, um JSON de resposta por POST — transporte
   Streamable HTTP stateless; o GET responde 405).
@@ -93,6 +98,16 @@ alguns hosts/WAFs como **ataque/invasão** e derrubar a conexão. Em vez disso,
 
 Use várias requisições **apenas** para leituras exploratórias pontuais. Toda
 sequência de escrita deve ser um `run_batch`.
+
+> **Atenção redobrada ao montar ou estilizar uma interface completa.** Criar ou
+> reformular uma página inteira — estrutura, seções, cores, fontes, espaçamentos,
+> estilos globais — é exatamente o cenário em que hosts com rate-limit agressivo
+> bloqueiam a 2ª ou 3ª requisição seguida, mesmo sendo todas legítimas. O
+> resultado é uma página pela metade: estrutura sem estilo, ou estilo sem
+> estrutura. Monte a interface **inteira** (elementos + estilos + regeneração de
+> CSS) em **um único `run_batch`**; para edições subsequentes, agrupe também
+> todas as alterações do lote em um só `run_batch`. Regra prática: quanto mais
+> mudanças, mais obrigatório é o lote único.
 
 ---
 

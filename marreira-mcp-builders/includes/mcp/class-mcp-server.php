@@ -205,7 +205,13 @@ class MCP_Server {
 	}
 
 	/**
-	 * Serve o SKILL.md (ou a variante enxuta no modo economico).
+	 * Serve o SKILL.md (ou a variante enxuta no modo economico) com as URLs
+	 * reais do site no lugar do placeholder SEU-SITE.
+	 *
+	 * Os arquivos .md ficam com o placeholder no repositorio (portaveis e
+	 * legiveis offline); a troca acontece em runtime, entao a IA recebe todos
+	 * os endpoints ja com o dominio real — basta a URL da skill para se
+	 * conectar, sem ninguem precisar ditar endpoint por endpoint.
 	 *
 	 * @return void
 	 */
@@ -219,10 +225,21 @@ class MCP_Server {
 			exit;
 		}
 
+		$content = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		if ( false === $content ) {
+			status_header( 500 );
+			header( 'Content-Type: text/plain; charset=utf-8' );
+			echo 'Erro ao ler o SKILL.md.';
+			exit;
+		}
+
+		// home_url() traz esquema + host + eventual subdiretorio da instalacao.
+		$content = str_replace( 'https://SEU-SITE', untrailingslashit( home_url() ), $content );
+
 		nocache_headers();
 		header( 'Content-Type: text/markdown; charset=utf-8' );
 		header( 'X-Robots-Tag: noindex' );
-		readfile( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+		echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
 	}
 
@@ -250,10 +267,13 @@ class MCP_Server {
 				'builder_active'  => $driver ? $driver->is_active() : false,
 				'ai_tier'         => Context_Strategy::tier(),
 				'token_abilities' => $abilities,
+				// Skill primeiro: e o ponto de entrada recomendado — o documento
+				// ja sai com as URLs reais e lista todos os endpoints.
 				'endpoints'       => array(
-					'mcp'   => esc_url_raw( rest_url( MMCB_REST_NAMESPACE . MMCB_REST_ROUTE ) ),
-					'skill' => esc_url_raw( rest_url( MMCB_REST_NAMESPACE . '/skill' ) ),
-					'cli'   => esc_url_raw( rest_url( MMCB_REST_NAMESPACE . '/cli' ) ),
+					'skill'    => esc_url_raw( rest_url( MMCB_REST_NAMESPACE . '/skill' ) ),
+					'mcp'      => esc_url_raw( rest_url( MMCB_REST_NAMESPACE . MMCB_REST_ROUTE ) ),
+					'describe' => esc_url_raw( rest_url( MMCB_REST_NAMESPACE . '/describe' ) ),
+					'cli'      => esc_url_raw( rest_url( MMCB_REST_NAMESPACE . '/cli' ) ),
 				),
 				'tools'           => $this->registry()->definitions(),
 			),

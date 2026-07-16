@@ -34,6 +34,27 @@ lote — que é o que se lê para decidir se atualiza.
   funcionando; o gate é só do painel. Nova action AJAX `mmcb_accept_terms` e bloco
   `terms` no payload de status. A desinstalação remove o registro.
 
+- **Skill dinâmica: `GET /skill` sai com as URLs reais do site.** O documento era
+  servido com o placeholder literal `SEU-SITE`, obrigando a IA a inferir o domínio
+  (ou o usuário a ditar endpoint por endpoint). Agora o servidor substitui
+  `https://SEU-SITE` por `home_url()` em runtime — a URL da skill passa a ser o
+  único dado de conexão necessário: ela lista todos os endpoints já resolvidos.
+  Os arquivos `SKILL.md`/`SKILL.economy.md` continuam com o placeholder no
+  repositório (portáveis e legíveis offline).
+
+- **`/describe` lista os quatro endpoints, com a skill primeiro.** Faltava o
+  próprio `/describe` na auto-descoberta, e a ordem agora reflete o fluxo
+  recomendado (skill → mcp → describe → cli).
+
+### Alterado
+
+- **SKILL (ambas as variantes): regra explícita de interface completa em um
+  `run_batch`.** Montar/estilizar uma página inteira é o cenário clássico em que
+  hosts/WAFs com rate-limit agressivo derrubam a 2ª/3ª requisição e a página fica
+  pela metade (estrutura sem estilo). A regra de ouro agora diz com todas as
+  letras: interface inteira — elementos, estilos, fontes, cores e regeneração de
+  CSS — vai em um único lote.
+
 ---
 
 ## [1.6.2] - 2026-07-16

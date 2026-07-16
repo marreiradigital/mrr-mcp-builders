@@ -5,6 +5,8 @@ enxuta para poupar contexto. Um site = um builder; veja os nomes exatos em
 `tools/list`.
 
 ## Conexão
+> As URLs deste documento já vêm com o domínio real do site (substituídas em
+> runtime) — a URL desta skill basta; não é preciso ditar endpoint por endpoint.
 - POST `https://SEU-SITE/wp-json/marreira-mcp/v1/mcp` — `Authorization: Bearer <token>`, TLS.
 - Handshake: `initialize` → `tools/list` → `tools/call`. Resultado em `result.content[0].text`.
 - **Conector Claude.ai / ChatGPT:** aponte o conector para a URL do MCP acima; o
@@ -33,6 +35,9 @@ enxuta para poupar contexto. Um site = um builder; veja os nomes exatos em
    ], "stop_on_error":false } }
    ```
    Use `dry_run:true` para validar antes.
+   **Interface completa (estrutura + estilos + fontes + cores): tudo em UM
+   `run_batch`** — hosts com rate-limit agressivo bloqueiam a 2ª/3ª requisição
+   seguida e a página fica pela metade.
 3. **Editar existente:** `get_page` primeiro; preserve formulários/shortcodes/loops.
 4. Antes de gerar, leia paleta/cores/fontes/classes globais do site (tools de
    estilo do builder ativo). Use tokens globais, não valores fixos.
