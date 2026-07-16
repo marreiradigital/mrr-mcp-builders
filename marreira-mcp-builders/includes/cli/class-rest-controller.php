@@ -446,7 +446,7 @@ class Rest_Controller {
 	 *
 	 * @return true|\WP_Error
 	 */
-	private static function require_cli_enabled(): true|\WP_Error {
+	private static function require_cli_enabled() {
 		$settings = Rest_Guard::settings();
 		if ( empty( $settings['enable_general_cli'] ) ) {
 			return new \WP_Error(
@@ -498,7 +498,7 @@ class Rest_Controller {
 	 * @param string $relative Caminho relativo recebido da requisicao.
 	 * @return string|\WP_Error Caminho absoluto validado ou erro.
 	 */
-	private static function safe_theme_path( string $relative ): string|\WP_Error {
+	private static function safe_theme_path( string $relative ) {
 		$relative = wp_normalize_path( $relative );
 		$relative = ltrim( $relative, '/' );
 
@@ -547,7 +547,7 @@ class Rest_Controller {
 	 * @param string $file Identificador recebido.
 	 * @return string|\WP_Error
 	 */
-	private static function safe_plugin_file( string $file ): string|\WP_Error {
+	private static function safe_plugin_file( string $file ) {
 		$file = wp_normalize_path( $file );
 		if (
 			'' === $file
@@ -567,7 +567,7 @@ class Rest_Controller {
 	 * @param string $stylesheet Stylesheet recebido.
 	 * @return string|\WP_Error
 	 */
-	private static function safe_stylesheet( string $stylesheet ): string|\WP_Error {
+	private static function safe_stylesheet( string $stylesheet ) {
 		if ( ! preg_match( '/^[A-Za-z0-9_\-]+$/', $stylesheet ) ) {
 			return new \WP_Error( 'mmcb_bad_stylesheet', 'Stylesheet inválido.', array( 'status' => 400 ) );
 		}
@@ -735,7 +735,7 @@ class Rest_Controller {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function list_plugins(): \WP_REST_Response|\WP_Error {
+	public static function list_plugins() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -770,7 +770,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function install_plugin( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function install_plugin( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -824,7 +824,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function activate_plugin( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function activate_plugin( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -848,7 +848,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function deactivate_plugin( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function deactivate_plugin( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -872,7 +872,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function update_plugin( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function update_plugin( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -900,7 +900,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function delete_plugin( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function delete_plugin( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -931,7 +931,7 @@ class Rest_Controller {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function list_themes(): \WP_REST_Response|\WP_Error {
+	public static function list_themes() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -962,7 +962,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function install_theme( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function install_theme( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1007,7 +1007,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function activate_theme( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function activate_theme( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1027,7 +1027,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function update_theme( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function update_theme( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1051,7 +1051,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function delete_theme( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function delete_theme( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1078,7 +1078,7 @@ class Rest_Controller {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function core_info(): \WP_REST_Response|\WP_Error {
+	public static function core_info() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1096,7 +1096,7 @@ class Rest_Controller {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function core_update(): \WP_REST_Response|\WP_Error {
+	public static function core_update() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1129,7 +1129,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function theme_files( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function theme_files( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1156,7 +1156,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function theme_file_read( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function theme_file_read( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1183,7 +1183,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function theme_file_write( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function theme_file_write( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1236,7 +1236,7 @@ class Rest_Controller {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function functions_read(): \WP_REST_Response|\WP_Error {
+	public static function functions_read() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1255,7 +1255,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function functions_write( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function functions_write( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1272,7 +1272,7 @@ class Rest_Controller {
 	 *
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function list_snippets(): \WP_REST_Response|\WP_Error {
+	public static function list_snippets() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1285,7 +1285,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function get_snippet( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function get_snippet( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1302,7 +1302,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function create_snippet( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function create_snippet( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1323,7 +1323,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function update_snippet( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function update_snippet( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1345,7 +1345,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function delete_snippet( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function delete_snippet( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1359,7 +1359,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function toggle_snippet( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function toggle_snippet( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1381,7 +1381,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function list_users( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function list_users( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1412,7 +1412,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function list_logs( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function list_logs( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1441,7 +1441,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function exec_php( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function exec_php( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 
@@ -1488,34 +1488,39 @@ class Rest_Controller {
 	/*  Content (posts, termos, comentarios, midia)                        */
 	/* ------------------------------------------------------------------ */
 
-	public static function list_posts( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function list_posts( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( Content::list_posts( $r->get_params() ) );
 	}
 
-	public static function get_post( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function get_post( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = Content::get_post( (int) $r['id'] );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function create_post( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function create_post( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = Content::create_post( $r->get_json_params() ?: $r->get_params() );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function update_post( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function update_post( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = Content::update_post( (int) $r['id'], $r->get_json_params() ?: $r->get_params() );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function delete_post( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function delete_post( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$force = (bool) $r->get_param( 'force' );
@@ -1523,59 +1528,68 @@ class Rest_Controller {
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function post_types(): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function post_types() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( array( 'post_types' => Content::list_post_types() ) );
 	}
 
-	public static function taxonomies(): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function taxonomies() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( array( 'taxonomies' => Content::list_taxonomies() ) );
 	}
 
-	public static function list_terms( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function list_terms( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( Content::list_terms( $r->get_params() ) );
 	}
 
-	public static function create_term( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function create_term( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = Content::create_term( $r->get_json_params() ?: $r->get_params() );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function update_term( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function update_term( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = Content::update_term( (int) $r['id'], $r->get_json_params() ?: $r->get_params() );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function delete_term( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function delete_term( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = Content::delete_term( (int) $r['id'] );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function list_comments( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function list_comments( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( Content::list_comments( $r->get_params() ) );
 	}
 
-	public static function moderate_comment( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function moderate_comment( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = Content::moderate_comment( (int) $r['id'], (string) $r['action'] );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function list_media( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function list_media( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( Content::list_media( $r->get_params() ) );
@@ -1585,34 +1599,39 @@ class Rest_Controller {
 	/*  DB Explorer                                                         */
 	/* ------------------------------------------------------------------ */
 
-	public static function db_tables(): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function db_tables() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( array( 'tables' => DB_Explorer::tables() ) );
 	}
 
-	public static function db_schema( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function db_schema( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = DB_Explorer::schema( (string) $r['name'] );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function db_count( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function db_count( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = DB_Explorer::count( (string) $r['name'] );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function db_sample( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function db_sample( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		$res = DB_Explorer::sample( (string) $r['name'], (int) ( $r->get_param( 'limit' ) ?: 10 ), (int) ( $r->get_param( 'offset' ) ?: 0 ) );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 
-	public static function db_relations(): \WP_REST_Response|\WP_Error {
+	/** @return \WP_REST_Response|\WP_Error */
+	public static function db_relations() {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 		return rest_ensure_response( array( 'relations' => DB_Explorer::relations_map() ) );
@@ -1626,7 +1645,7 @@ class Rest_Controller {
 	 * @param \WP_REST_Request $r Requisicao.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function db_query( \WP_REST_Request $r ): \WP_REST_Response|\WP_Error {
+	public static function db_query( \WP_REST_Request $r ) {
 		$check = self::require_cli_enabled();
 		if ( is_wp_error( $check ) ) { return $check; }
 

@@ -110,7 +110,8 @@ class Content {
 		);
 	}
 
-	public static function get_post( int $id ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function get_post( int $id ) {
 		$post = get_post( $id );
 		if ( ! $post instanceof \WP_Post ) {
 			return new \WP_Error( 'mmcb_not_found', 'Post não encontrado.', array( 'status' => 404 ) );
@@ -118,7 +119,8 @@ class Content {
 		return self::post_to_array( $post, true );
 	}
 
-	public static function create_post( array $data ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function create_post( array $data ) {
 		$allowed_types = array_keys( get_post_types( array( 'show_ui' => true ), 'names' ) );
 		$type          = sanitize_key( (string) ( $data['type'] ?? 'post' ) );
 		if ( ! in_array( $type, $allowed_types, true ) && ! in_array( $type, array( 'post', 'page' ), true ) ) {
@@ -157,7 +159,8 @@ class Content {
 		return self::get_post( (int) $id );
 	}
 
-	public static function update_post( int $id, array $data ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function update_post( int $id, array $data ) {
 		if ( ! get_post( $id ) ) {
 			return new \WP_Error( 'mmcb_not_found', 'Post não encontrado.', array( 'status' => 404 ) );
 		}
@@ -190,7 +193,8 @@ class Content {
 		return self::get_post( $id );
 	}
 
-	public static function delete_post( int $id, bool $force = false ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function delete_post( int $id, bool $force = false ) {
 		if ( ! get_post( $id ) ) {
 			return new \WP_Error( 'mmcb_not_found', 'Post não encontrado.', array( 'status' => 404 ) );
 		}
@@ -303,7 +307,8 @@ class Content {
 		return array( 'terms' => $out, 'total' => count( $out ) );
 	}
 
-	public static function create_term( array $data ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function create_term( array $data ) {
 		$tax = sanitize_key( (string) ( $data['taxonomy'] ?? '' ) );
 		if ( ! taxonomy_exists( $tax ) ) {
 			return new \WP_Error( 'mmcb_bad_taxonomy', 'Taxonomia inválida.', array( 'status' => 400 ) );
@@ -323,7 +328,8 @@ class Content {
 		return array( 'id' => (int) $res['term_id'], 'taxonomy' => $tax );
 	}
 
-	public static function update_term( int $id, array $data ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function update_term( int $id, array $data ) {
 		$term = get_term( $id );
 		if ( ! $term || is_wp_error( $term ) ) {
 			return new \WP_Error( 'mmcb_not_found', 'Termo não encontrado.', array( 'status' => 404 ) );
@@ -340,7 +346,8 @@ class Content {
 		return array( 'id' => $id, 'updated' => true );
 	}
 
-	public static function delete_term( int $id ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function delete_term( int $id ) {
 		$term = get_term( $id );
 		if ( ! $term || is_wp_error( $term ) ) {
 			return new \WP_Error( 'mmcb_not_found', 'Termo não encontrado.', array( 'status' => 404 ) );
@@ -380,7 +387,8 @@ class Content {
 		return array( 'comments' => $out );
 	}
 
-	public static function moderate_comment( int $id, string $action ): array|\WP_Error {
+	/** @return array|\WP_Error */
+	public static function moderate_comment( int $id, string $action ) {
 		$comment = get_comment( $id );
 		if ( ! $comment ) {
 			return new \WP_Error( 'mmcb_not_found', 'Comentário não encontrado.', array( 'status' => 404 ) );

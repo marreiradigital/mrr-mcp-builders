@@ -27,6 +27,44 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.4.0] - 2026-07-16
+
+### Corrigido
+
+- **Erro fatal na ativação em PHP anterior a 8.2** (`Cannot use 'true' as class
+  name as it is reserved`). O método `CLI\Rest_Controller::require_cli_enabled()`
+  declarava o tipo de retorno `true|\WP_Error`. O tipo literal `true` em union
+  type só existe a partir do **PHP 8.2**; em versões anteriores `true` é palavra
+  reservada e o parser tentava interpretá-la como nome de classe — resolvendo
+  para `Marreira\MCP_Builders\CLI\true` e derrubando o site inteiro no load do
+  plugin. Ou seja: o plugin declarava `Requires PHP: 8.0`, mas esse trecho na
+  prática exigia 8.2.
+
+### Alterado
+
+- **Piso de PHP reduzido de 8.0 para 7.4** (`Requires PHP: 7.4`). O plugin agora
+  roda em 7.4, 8.0, 8.1, 8.2, 8.3 e 8.4. O núcleo do WordPress suporta PHP 7.2+,
+  e uma parte relevante dos sites em produção ainda está em 7.4 — manter um piso
+  em 8.0 excluía esses sites sem que houvesse necessidade técnica real.
+- **Union types removidos das 59 assinaturas** de `CLI\Rest_Controller` e
+  `CLI\Content` (`\WP_REST_Response|\WP_Error`, `array|\WP_Error`,
+  `string|\WP_Error`). Union type em assinatura é PHP 8.0+ e não tem equivalente
+  em 7.4. O tipo passou para o docblock (`@return`), que é a convenção do próprio
+  núcleo do WordPress. Não há mudança de comportamento: o projeto não usa
+  `declare(strict_types=1)`, e nenhuma dessas assinaturas fazia coerção — a única
+  perda é a checagem de tipo em runtime, que a documentação agora expressa.
+
+### Adicionado
+
+- **Guard de compatibilidade no CI** (`.github/workflows/php-compat.yml`): roda
+  `php -l` em todos os arquivos do plugin nas versões **7.4, 8.0, 8.3 e 8.4** a
+  cada push e pull request. Foi exatamente a ausência de uma checagem assim que
+  deixou um construto de PHP 8.2 entrar num plugin que se declarava 8.0 e só
+  quebrar em produção, no site do usuário final.
+- **Script `scripts/lint-php.sh`** para rodar o mesmo lint localmente.
+
+---
+
 ## [1.3.1] - 2026-07-14
 
 ### Corrigido

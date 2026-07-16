@@ -3,8 +3,8 @@ Contributors: paulomarreira
 Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
-Requires PHP: 8.0
-Stable tag: 1.3.1
+Requires PHP: 7.4
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -151,6 +151,17 @@ instale este no lugar.
 Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
+
+= 1.4.0 =
+* Correção: erro fatal na ativação em PHP anterior a 8.2 ("Cannot use 'true' as
+  class name as it is reserved"). O tipo de retorno `true|\WP_Error` só é válido
+  a partir do PHP 8.2 — em versões anteriores derrubava o site no load do plugin.
+* O plugin agora exige PHP 7.4 (antes 8.0) e roda em 7.4, 8.0, 8.1, 8.2, 8.3 e 8.4.
+* Union types removidos das assinaturas (PHP 8.0+, sem equivalente em 7.4); o tipo
+  passou para o docblock `@return`, como faz o próprio núcleo do WordPress. Sem
+  mudança de comportamento.
+* CI: `php -l` em todos os arquivos nas versões 7.4, 8.0, 8.3 e 8.4 a cada push,
+  para que uma incompatibilidade de versão não chegue mais em produção.
 
 = 1.3.1 =
 * Correção: PKCE verificado antes de consumir o authorization code (verifier
