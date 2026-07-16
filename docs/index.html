@@ -7,36 +7,37 @@
 <meta name="description" content="Servidor MCP unificado para Bricks Builder e Elementor: IA cria e edita paginas com CLI de WordPress, multi-token com escopos e batch em uma requisicao.">
 <style>
   :root{
-    --bg:#f4f5f6; --surface:#ffffff; --surface-2:#eef0f2; --ink:#15181c; --muted:#59616b;
-    --border:#e1e4e8; --accent:#e2680d; --accent-ink:#ffffff; --link:#20609e;
-    --ok:#2f9e5b; --warn:#b5820a; --danger:#cf4a35;
-    --code-bg:#f7f8f9; --code-ink:#1d2937; --pill:#ececed;
-    --shadow:0 1px 2px rgba(20,24,28,.06), 0 8px 24px -18px rgba(20,24,28,.35);
+    --bg:#faf9f5; --surface:#ffffff; --surface-2:#f5f3ee; --ink:#1a1614; --muted:#6b6460;
+    --border:#e0dbd4; --accent:#c96442; --accent-ink:#ffffff; --link:#a05436;
+    --ok:#2a7d4f; --warn:#9a6f20; --danger:#b83030;
+    --code-bg:#efede8; --code-ink:#2d2420; --pill:#ece8e1;
+    --shadow:0 1px 2px rgba(26,22,20,.06), 0 8px 24px -18px rgba(26,22,20,.35);
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Times New Roman",ui-serif,serif;
     --mono:"SF Mono","JetBrains Mono","Cascadia Code","Consolas",ui-monospace,Menlo,monospace;
     --maxw:76ch;
   }
   @media (prefers-color-scheme:dark){
     :root{
-      --bg:#0f1215; --surface:#171b20; --surface-2:#1d2228; --ink:#e7eaed; --muted:#8b939d;
-      --border:#252b32; --accent:#f2801f; --accent-ink:#161001; --link:#66a7e0;
-      --ok:#43b06e; --warn:#d6a72a; --danger:#e06854;
-      --code-bg:#12161a; --code-ink:#cfd8e2; --pill:#232830;
+      --bg:#141210; --surface:#1c1917; --surface-2:#232019; --ink:#f0ede8; --muted:#9a928a;
+      --border:#2e2a26; --accent:#d47050; --accent-ink:#14100e; --link:#dd9a71;
+      --ok:#3d9e68; --warn:#c49535; --danger:#d4534a;
+      --code-bg:#0f0d0b; --code-ink:#d4cdc6; --pill:#2e2a26;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.7);
     }
   }
   :root[data-theme="light"]{
-    --bg:#f4f5f6; --surface:#ffffff; --surface-2:#eef0f2; --ink:#15181c; --muted:#59616b;
-    --border:#e1e4e8; --accent:#e2680d; --accent-ink:#ffffff; --link:#20609e;
-    --ok:#2f9e5b; --warn:#b5820a; --danger:#cf4a35;
-    --code-bg:#f7f8f9; --code-ink:#1d2937; --pill:#ececed;
-    --shadow:0 1px 2px rgba(20,24,28,.06), 0 8px 24px -18px rgba(20,24,28,.35);
+    --bg:#faf9f5; --surface:#ffffff; --surface-2:#f5f3ee; --ink:#1a1614; --muted:#6b6460;
+    --border:#e0dbd4; --accent:#c96442; --accent-ink:#ffffff; --link:#a05436;
+    --ok:#2a7d4f; --warn:#9a6f20; --danger:#b83030;
+    --code-bg:#efede8; --code-ink:#2d2420; --pill:#ece8e1;
+    --shadow:0 1px 2px rgba(26,22,20,.06), 0 8px 24px -18px rgba(26,22,20,.35);
   }
   :root[data-theme="dark"]{
-    --bg:#0f1215; --surface:#171b20; --surface-2:#1d2228; --ink:#e7eaed; --muted:#8b939d;
-    --border:#252b32; --accent:#f2801f; --accent-ink:#161001; --link:#66a7e0;
-    --ok:#43b06e; --warn:#d6a72a; --danger:#e06854;
-    --code-bg:#12161a; --code-ink:#cfd8e2; --pill:#232830;
+    --bg:#141210; --surface:#1c1917; --surface-2:#232019; --ink:#f0ede8; --muted:#9a928a;
+    --border:#2e2a26; --accent:#d47050; --accent-ink:#14100e; --link:#dd9a71;
+    --ok:#3d9e68; --warn:#c49535; --danger:#d4534a;
+    --code-bg:#0f0d0b; --code-ink:#d4cdc6; --pill:#2e2a26;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.7);
   }
 
@@ -61,7 +62,7 @@
   }
   .brand{display:flex; align-items:center; gap:11px; font-weight:800; letter-spacing:-.02em; font-size:1.02rem}
   .glyph{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
-    background:linear-gradient(150deg,var(--accent),#b64e05); color:#fff; box-shadow:var(--shadow)}
+    background:linear-gradient(150deg,var(--accent),#b55a39); color:#fff; box-shadow:var(--shadow)}
   .glyph svg{width:17px;height:17px;display:block}
   .ver{font-family:var(--mono); font-size:.7rem; font-weight:600; color:var(--accent);
     border:1px solid color-mix(in srgb,var(--accent) 40%,var(--border)); border-radius:999px; padding:2px 8px}
@@ -99,7 +100,7 @@
   /* ---- Hero ---- */
   .hero{margin-bottom:14px}
   .hero .kicker{font-family:var(--mono); font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:600}
-  h1{font-size:clamp(1.9rem,4.6vw,2.9rem); line-height:1.08; letter-spacing:-.03em; margin:.35em 0 .3em; text-wrap:balance; font-weight:820}
+  h1{font-family:var(--serif); font-size:clamp(1.9rem,4.6vw,2.9rem); line-height:1.08; letter-spacing:-.02em; margin:.35em 0 .3em; text-wrap:balance; font-weight:700}
   .lede{font-size:clamp(1.05rem,2.2vw,1.22rem); color:var(--muted); max-width:64ch; text-wrap:pretty}
   .hero-actions{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px}
   .btn{display:inline-flex; align-items:center; gap:8px; height:42px; padding:0 18px; border-radius:10px;
@@ -110,7 +111,7 @@
   .btn.ghost:hover{border-color:var(--accent); text-decoration:none}
 
   section{margin-top:52px; scroll-margin-top:74px}
-  h2{font-size:clamp(1.35rem,2.6vw,1.7rem); letter-spacing:-.02em; margin:0 0 .5em; font-weight:760; text-wrap:balance}
+  h2{font-family:var(--serif); font-size:clamp(1.35rem,2.6vw,1.7rem); letter-spacing:-.015em; margin:0 0 .5em; font-weight:700; text-wrap:balance}
   h2 .n{font-family:var(--mono); font-size:.8rem; color:var(--accent); margin-right:.6em; font-weight:600; vertical-align:.15em}
   h3{font-size:1.05rem; margin:1.6em 0 .4em; letter-spacing:-.01em}
   p{max-width:66ch}

@@ -92,6 +92,11 @@ lote — que é o que se lê para decidir se atualiza.
   (claro creme/terracota com escuro automático pelo sistema). Só o CSS mudou — a
   lógica de autorização (PKCE, nonce, escopos) está intocada.
 
+- **Site público (docs) alinhado à nova identidade.** Os tokens do
+  `docs/index.html` migraram do cinza frio/laranja para o mesmo creme/terracota
+  do painel (claro e escuro), com títulos na serifa de sistema. Os marcadores de
+  versão reescritos pelo `build.ps1` ficaram intocados.
+
 - **SKILL (ambas as variantes): regra explícita de interface completa em um
   `run_batch`.** Montar/estilizar uma página inteira é o cenário clássico em que
   hosts/WAFs com rate-limit agressivo derrubam a 2ª/3ª requisição e a página fica
