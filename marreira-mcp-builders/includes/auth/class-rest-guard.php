@@ -271,14 +271,50 @@ class Rest_Guard {
 		}
 
 		$key   = 'mmcb_rl_' . (int) $token_id;
-		$count = (int) get_transient( $key );
+		$count = self::bump_counter( $key, $window );
 
-		if ( $count >= $max ) {
+		if ( $count > $max ) {
 			return new WP_Error( 'mmcb_rate_limited', __( 'Limite de requisicoes excedido. Tente novamente em instantes.', 'marreira-mcp-builders' ), array( 'status' => 429 ) );
 		}
 
-		set_transient( $key, $count + 1, $window );
 		return true;
+	}
+
+	/**
+	 * Incrementa um contador de janela e devolve o valor JA incrementado.
+	 *
+	 * Ler e depois gravar (get_transient + set_transient) nao e atomico: em
+	 * requisicoes simultaneas duas threads leem o mesmo valor, as duas acham que
+	 * ha espaco e as duas gravam o mesmo numero — o limite efetivo virava
+	 * "max + concorrencia - 1".
+	 *
+	 * Com object cache persistente (Redis/Memcached), wp_cache_incr() e uma
+	 * operacao atomica no proprio servidor de cache e resolve o problema. Sem
+	 * object cache externo, wp_cache_* e so memoria do request, entao cai no
+	 * transient — que mantem o comportamento antigo (a corrida continua possivel,
+	 * mas o contador ao menos persiste entre requests, que e o essencial).
+	 *
+	 * @param string $key    Chave do contador.
+	 * @param int    $window Janela em segundos.
+	 * @return int Valor apos o incremento.
+	 */
+	private static function bump_counter( $key, $window ) {
+		if ( wp_using_ext_object_cache() ) {
+			$group = 'mmcb';
+			// add() so cria se ainda nao existir — quem perder a corrida do add
+			// simplesmente incrementa o contador que ja esta la.
+			wp_cache_add( $key, 0, $group, (int) $window );
+			$count = wp_cache_incr( $key, 1, $group );
+			if ( false !== $count ) {
+				return (int) $count;
+			}
+			// A chave expirou entre o add e o incr: trata como primeira do periodo.
+			return 1;
+		}
+
+		$count = (int) get_transient( $key ) + 1;
+		set_transient( $key, $count, $window );
+		return $count;
 	}
 
 	/**

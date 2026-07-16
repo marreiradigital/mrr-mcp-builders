@@ -552,16 +552,27 @@ class Rest_Controller {
 			return $resolved;
 		}
 
-		$parent = dirname( $abs );
-		if ( file_exists( $parent ) ) {
-			$resolved_parent = wp_normalize_path( (string) realpath( $parent ) );
-			$resolved_root   = wp_normalize_path( (string) realpath( $theme_dir ) );
-			if (
-				! $resolved_parent || ! $resolved_root
-				|| ( $resolved_parent !== $resolved_root && strpos( $resolved_parent, $resolved_root . '/' ) !== 0 )
-			) {
-				return new \WP_Error( 'mmcb_path_traversal', 'Diretório pai fora do tema.', array( 'status' => 400 ) );
+		// O arquivo nao existe: sobe ate o PRIMEIRO ancestral que existe e valida
+		// ele. Checar so o pai imediato deixava um furo: com "a/b/c.php", se "a" e
+		// um symlink pra fora do tema e "a/b" ainda nao existe, o pai imediato nao
+		// existe, a checagem era pulada, e o theme_file_write() em seguida fazia
+		// wp_mkdir_p() criando "b" dentro do symlink — gravando fora do tema.
+		$ancestor = dirname( $abs );
+		while ( ! file_exists( $ancestor ) && strlen( $ancestor ) > strlen( $theme_dir ) ) {
+			$parent = dirname( $ancestor );
+			if ( $parent === $ancestor ) {
+				break; // Chegou na raiz do filesystem.
 			}
+			$ancestor = $parent;
+		}
+
+		$resolved_ancestor = wp_normalize_path( (string) realpath( $ancestor ) );
+		$resolved_root     = wp_normalize_path( (string) realpath( $theme_dir ) );
+		if (
+			! $resolved_ancestor || ! $resolved_root
+			|| ( $resolved_ancestor !== $resolved_root && strpos( $resolved_ancestor, $resolved_root . '/' ) !== 0 )
+		) {
+			return new \WP_Error( 'mmcb_path_traversal', 'Diretório fora do tema.', array( 'status' => 400 ) );
 		}
 
 		return $abs;

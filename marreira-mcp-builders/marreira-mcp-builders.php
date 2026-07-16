@@ -3,7 +3,7 @@
  * Plugin Name:       MarreiraMCP Builders
  * Plugin URI:        https://marreiradigital.com.br/marreira-mcp-builders
  * Description:        Servidor MCP (Model Context Protocol) unificado para criar e editar paginas e templates do Bricks Builder OU do Elementor via IA, com CLI completo (estilo WP-CLI), multi-token com escopos, batch de uma requisicao, audit log e endpoints ocultos do indice publico do REST.
- * Version:           1.5.0
+ * Version:           1.5.1
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Author:            Paulo Marreira
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 // Constantes do plugin.
 // ---------------------------------------------------------------------------
-define( 'MMCB_VERSION', '1.5.0' );
+define( 'MMCB_VERSION', '1.5.1' );
 define( 'MMCB_PLUGIN_FILE', __FILE__ );
 define( 'MMCB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MMCB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

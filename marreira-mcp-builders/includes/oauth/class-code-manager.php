@@ -139,8 +139,18 @@ class Code_Manager {
 	public static function purge_expired() {
 		global $wpdb;
 		$table = Activator::table_oauth_codes();
+
+		// Carencia de 5 minutos, nao de 1 hora. O TTL do code e de 60s, entao a
+		// carencia antiga preservava linhas ja mortas por ~59 minutos a toa. Cinco
+		// minutos continuam de sobra para inspecionar um fluxo recem-falhado no
+		// banco, sem deixar a tabela acumulando.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE expires_at < %s", gmdate( 'Y-m-d H:i:s', time() - HOUR_IN_SECONDS ) ) );
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$table} WHERE expires_at < %s",
+				gmdate( 'Y-m-d H:i:s', time() - ( 5 * MINUTE_IN_SECONDS ) )
+			)
+		);
 	}
 
 	/**

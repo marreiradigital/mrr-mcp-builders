@@ -29,20 +29,41 @@ class Element_Tree {
 	 * @return string
 	 */
 	public static function generate_id( array $taken = array() ) {
-		if ( class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'generate_random_id' ) ) {
-			// O helper do Bricks ja garante unicidade global.
-			return \Bricks\Helpers::generate_random_id( false );
+		$native = class_exists( '\Bricks\Helpers' ) && method_exists( '\Bricks\Helpers', 'generate_random_id' );
+
+		// $taken vale para os DOIS caminhos. Antes o helper nativo era usado sem
+		// consultar $taken (o comentario dizia que ele "garante unicidade global",
+		// mas ele so sorteia um id aleatorio de 6 chars). Como regenerate_ids()
+		// acumula em $taken os ids ja presentes na pagina e os que acabou de
+		// gerar, uma colisao passava direto e so estourava depois, no validate(),
+		// como "Id duplicado" — insert/duplicate falhando com erro opaco.
+		for ( $attempt = 0; $attempt < 50; $attempt++ ) {
+			$id = $native ? (string) \Bricks\Helpers::generate_random_id( false ) : self::random_id();
+			if ( '' !== $id && ! in_array( $id, $taken, true ) ) {
+				return $id;
+			}
 		}
 
-		// Fallback: 6 chars [a-z0-9].
-		$chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		// 50 colisoes seguidas nao acontece na pratica (36^6 combinacoes); se
+		// acontecer, o gerador local insiste ate achar um id livre.
 		do {
-			$id = '';
-			for ( $i = 0; $i < 6; $i++ ) {
-				$id .= $chars[ random_int( 0, strlen( $chars ) - 1 ) ];
-			}
+			$id = self::random_id();
 		} while ( in_array( $id, $taken, true ) );
 
+		return $id;
+	}
+
+	/**
+	 * Id aleatorio de 6 chars [a-z0-9], no formato que o Bricks usa.
+	 *
+	 * @return string
+	 */
+	private static function random_id() {
+		$chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		$id    = '';
+		for ( $i = 0; $i < 6; $i++ ) {
+			$id .= $chars[ random_int( 0, strlen( $chars ) - 1 ) ];
+		}
 		return $id;
 	}
 

@@ -407,7 +407,34 @@ class Admin {
 	 */
 	public function ajax_list_tokens() {
 		$this->verify();
-		wp_send_json_success( array( 'tokens' => Token_Manager::list_tokens() ) );
+		wp_send_json_success( array( 'tokens' => $this->tokens_payload() ) );
+	}
+
+	/**
+	 * Tokens para o painel, com todos os horarios na hora do site.
+	 *
+	 * A tabela mistura fuso por coluna: created_at e last_used_at sao gravados
+	 * com current_time('mysql') (hora do site) e expires_at com gmdate (UTC). O
+	 * painel renderiza todos como hora local, entao o expires_at saia deslocado
+	 * pelo offset do site — num site em UTC-3, um token OAuth de 1 hora parecia
+	 * expirar so 4 horas depois.
+	 *
+	 * A conversao fica aqui, na camada de exibicao, e nao no formato gravado: as
+	 * linhas ja existentes continuariam no formato antigo de qualquer jeito, e o
+	 * Rest_Guard compara expires_at corretamente em UTC (o WordPress forca o fuso
+	 * do PHP pra UTC), entao nao ha nada errado no armazenamento.
+	 *
+	 * @return array
+	 */
+	private function tokens_payload() {
+		$out = array();
+		foreach ( Token_Manager::list_tokens() as $token ) {
+			if ( ! empty( $token['expires_at'] ) ) {
+				$token['expires_at'] = get_date_from_gmt( (string) $token['expires_at'] );
+			}
+			$out[] = $token;
+		}
+		return $out;
 	}
 
 	/**
@@ -520,7 +547,8 @@ class Admin {
 				'approved_at'   => (string) $c['approved_at'],
 				'connected'     => $conn ? (bool) $conn['connected'] : false,
 				'last_used_at'  => $conn ? $conn['last_used_at'] : null,
-				'token_expires' => $conn ? $conn['expires_at'] : null,
+				// expires_at vem em UTC (gmdate); o painel exibe hora do site.
+				'token_expires' => ( $conn && $conn['expires_at'] ) ? get_date_from_gmt( (string) $conn['expires_at'] ) : null,
 				'ever_issued'   => $conn ? ( $conn['tokens'] > 0 ) : false,
 			);
 		}

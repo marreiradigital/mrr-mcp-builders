@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -151,6 +151,27 @@ instale este no lugar.
 Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
+
+= 1.5.1 =
+Segundo lote da auditoria — os achados menores que ficaram de fora da 1.5.0.
+* Elementor: páginas criadas em CPT (product, portfolio...) eram marcadas como
+  documento de página; o Elementor abria com a classe errada. Só `page` é documento
+  de página; o resto é documento de post, como o próprio Elementor faz.
+* Bricks: o gerador de ID ignorava os IDs já em uso quando o helper nativo estava
+  disponível — uma colisão fazia insert/duplicate falhar com "Id duplicado".
+* Segurança: `safe_theme_path()` validava só o diretório pai imediato; um symlink
+  mais acima na árvore permitia gravar fora do tema.
+* Segurança (Elementor): árvores de elementos não tinham limite de profundidade —
+  um payload absurdamente aninhado derrubava o processo. O driver do Bricks já
+  estava protegido; agora o do Elementor também.
+* MCP: `notifications/initialized` enviado com `id` não recebia resposta, violando
+  a JSON-RPC 2.0.
+* Rate limit por token deixou de ter corrida em requisições simultâneas (usa
+  incremento atômico quando há object cache persistente).
+* Painel: horários misturavam fusos — um token OAuth de 1 hora aparecia expirando
+  4 horas depois. Corrigido na exibição.
+* OAuth: a URL de retorno do login deixou de ser montada a partir do `HTTP_HOST`.
+* Limpeza de authorization codes deixou de preservar linhas mortas por ~1 hora.
 
 = 1.5.0 =
 Lote de correções vindas de uma auditoria completa do plugin.

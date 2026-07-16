@@ -18,6 +18,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Fabrica e cache dos drivers, alem da leitura do builder selecionado no
  * onboarding (option active_builder). Um driver ativo por vez.
+ *
+ * Sobre "um builder ativo por vez": a regra e sobre qual driver fica ATIVO —
+ * quem registra hooks, tools e responde pelo builder. Ela nao proibe construir o
+ * objeto do outro driver para introspeccao: all() e detect_available() precisam
+ * perguntar a cada driver se o builder dele esta instalado no site, e isso e
+ * pergunta de instancia (is_active()).
+ *
+ * Isso e seguro porque os drivers NAO tem construtor: instanciar nao registra
+ * hook, nao toca no banco e nao cria estado alem do proprio objeto. Quem cria
+ * estado e o boot, que carrega apenas active_driver(). Se algum dia um driver
+ * ganhar construtor com efeito colateral, esta premissa cai e a deteccao precisa
+ * deixar de instanciar (ex.: is_active() virar estatico).
  */
 class Builder_Manager {
 

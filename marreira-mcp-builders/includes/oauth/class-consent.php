@@ -174,9 +174,15 @@ class Consent {
 	 * @return string
 	 */
 	private static function current_url() {
-		$host = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : wp_parse_url( home_url(), PHP_URL_HOST );
-		$uri  = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( ( is_ssl() ? 'https' : 'http' ) . '://' . $host . wp_unslash( $_SERVER['REQUEST_URI'] ) ) : home_url();
-		return $uri;
+		// Host e esquema saem do home_url(), nao do HTTP_HOST: o header e escrito
+		// pelo cliente e pode ser forjado — o valor daqui vira o redirect_to do
+		// wp-login. Na pratica o WordPress ja barraria o redirect forjado no
+		// wp_safe_redirect, mas nao ha motivo pra depender disso: so o CAMINHO
+		// precisa vir da requisicao, e ele nao decide destino de host nenhum.
+		$path = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$path = '/' . ltrim( (string) $path, '/' );
+
+		return esc_url_raw( home_url( $path ) );
 	}
 
 	/**

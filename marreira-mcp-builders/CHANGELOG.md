@@ -27,6 +27,71 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.5.1] - 2026-07-16
+
+Segundo lote da auditoria: os achados menores que ficaram de fora da 1.5.0.
+
+### Corrigido
+
+- **Elementor: CPTs eram gravados como documento de página.** `create_page()`
+  definia `_elementor_template_type` com `'post' === $post_type ? 'wp-post' :
+  'wp-page'` — o inverso do que o Elementor faz. O Elementor
+  (`Documents_Manager::get_doc_type_by_id()`) só mapeia `post => wp-post` e
+  `page => wp-page`, e para qualquer outro post_type cai no fallback `post`, que
+  aponta para a mesma classe do `wp-post`. Ou seja: um CPT (`product`,
+  `portfolio`...) era marcado como `wp-page` e o Elementor instanciava o
+  documento com a classe errada (Page em vez de Post). Agora só `page` é
+  documento de página; todo o resto é documento de post.
+- **Bricks: o gerador de ID ignorava os IDs já em uso.** `generate_id()` usava o
+  helper nativo do Bricks sem consultar `$taken` (o comentário afirmava que ele
+  "garante unicidade global", mas ele apenas sorteia 6 caracteres). Como
+  `regenerate_ids()` acumula em `$taken` os IDs já presentes na página e os que
+  acabou de gerar, uma colisão passava batido e só estourava depois, no
+  `validate()`, como "Id duplicado" — `insert_element`/`duplicate_element`
+  falhando com erro opaco. Agora `$taken` vale para os dois caminhos.
+- **`safe_theme_path()` validava só o diretório pai imediato.** Com
+  `a/b/c.php`, se `a` fosse um symlink para fora do tema e `a/b` ainda não
+  existisse, o pai imediato não existia, a validação era pulada e o
+  `theme_file_write()` criava `b` dentro do symlink — gravando fora do tema.
+  Agora sobe até o primeiro ancestral existente e valida esse.
+- **`notifications/initialized` com `id` não respondia.** Retornava `202` sem
+  corpo mesmo quando o cliente mandava um `id`. A JSON-RPC 2.0 exige responder
+  com o mesmo `id` a qualquer requisição que o traga; um cliente que espera
+  correlacionar ficava sem resposta e podia tratar como falha de rede. Sem `id`
+  (o caso normal) continua `202`.
+- **Rate limit por token tinha corrida.** `get_transient()` + `set_transient()`
+  não é atômico: em requisições simultâneas duas threads liam o mesmo valor e as
+  duas passavam, deixando o limite efetivo em `max + concorrência - 1`. Com
+  object cache persistente (Redis/Memcached) passa a usar `wp_cache_incr()`, que
+  é atômico; sem object cache externo, mantém o transient.
+- **Horários do painel misturavam fusos.** A tabela grava `created_at` e
+  `last_used_at` em hora do site (`current_time`) e `expires_at` em UTC
+  (`gmdate`), e o painel renderizava todos como hora local — num site em UTC−3,
+  um token OAuth de 1 hora aparecia expirando 4 horas depois. A conversão passou
+  a ser feita na camada de exibição. (O armazenamento estava correto: o
+  `Rest_Guard` compara em UTC, e o WordPress força o fuso do PHP para UTC.)
+- **OAuth: `current_url()` montava a URL a partir do `HTTP_HOST`**, que é escrito
+  pelo cliente, para gerar o `redirect_to` do wp-login. Na prática o WordPress já
+  barraria um destino forjado no `wp_safe_redirect`, mas não há motivo para
+  depender disso — agora host e esquema vêm do `home_url()` e só o caminho vem da
+  requisição.
+- **Purge de authorization codes preservava linhas mortas por ~1 hora.** O TTL do
+  code é de 60s; a carência caiu para 5 minutos.
+
+### Segurança
+
+- **Elementor: árvores sem limite de profundidade.** O `Code_Guard` e o
+  `Element_Tree` percorrem a árvore recursivamente e o PHP não tem teto de
+  recursão — uma árvore absurdamente aninhada derrubava o processo antes de
+  qualquer validação. O driver do Bricks já estava protegido pelo `deep_clean`
+  (que também remove bytes nulos e rejeita objetos PHP); o do Elementor não tinha
+  equivalente. Agora tem, com teto de 200 níveis — bem acima do de 30 do Bricks,
+  porque a árvore do Bricks é plana e a do Elementor é aninhada (cada nível de
+  elemento custa dois níveis de array, e containers aninham à vontade), então um
+  teto baixo recusaria página legítima.
+
+---
+
 ## [1.5.0] - 2026-07-16
 
 Lote de correções vindas de uma auditoria completa do plugin (OAuth, autenticação,

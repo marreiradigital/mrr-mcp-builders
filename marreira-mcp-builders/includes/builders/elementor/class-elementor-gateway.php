@@ -189,7 +189,7 @@ class Elementor_Gateway {
 		// Marca como documento Elementor antes de salvar (necessario para o
 		// Document API reconhecer o post).
 		update_post_meta( $post_id, self::META_EDIT_MODE, 'builder' );
-		update_post_meta( $post_id, self::META_TEMPLATE_TYPE, 'post' === $post_type ? 'wp-post' : 'wp-page' );
+		update_post_meta( $post_id, self::META_TEMPLATE_TYPE, self::document_type_for( $post_type ) );
 
 		$saved = self::save_elements( $post_id, $elements );
 		if ( is_wp_error( $saved ) ) {
@@ -197,6 +197,29 @@ class Elementor_Gateway {
 		}
 
 		return (int) $post_id;
+	}
+
+	/**
+	 * Valor de _elementor_template_type para um post_type.
+	 *
+	 * Espelha o que o proprio Elementor faz em
+	 * Documents_Manager::get_doc_type_by_id(): ele consulta um mapa
+	 * post_type => tipo de documento que so registra `post => wp-post` e
+	 * `page => wp-page`, e para qualquer outro post_type cai no fallback `post`,
+	 * que aponta para a MESMA classe de documento do `wp-post`
+	 * (ambos = DocumentTypes\Post).
+	 *
+	 * Ou seja: so `page` e documento de pagina; todo o resto, CPT incluso
+	 * (product, portfolio...), e documento de post. O codigo antigo fazia o
+	 * inverso do fallback ('post' === $post_type ? 'wp-post' : 'wp-page'), entao
+	 * um CPT era gravado como wp-page e o Elementor instanciava o documento com a
+	 * classe errada (Page em vez de Post).
+	 *
+	 * @param string $post_type Post type do documento.
+	 * @return string wp-page ou wp-post.
+	 */
+	private static function document_type_for( $post_type ) {
+		return 'page' === $post_type ? 'wp-page' : 'wp-post';
 	}
 
 	/**

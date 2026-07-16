@@ -374,7 +374,15 @@ class MCP_Server {
 
 			case 'notifications/initialized':
 			case 'initialized':
-				return new WP_REST_Response( null, 202 );
+				// Normalmente vem como notificacao (sem id) e a resposta correta e
+				// so um 202 sem corpo. Mas se o cliente mandou um id, entao — por
+				// mais que seja tecnicamente malformado — a JSON-RPC 2.0 obriga
+				// responder com o MESMO id: um cliente que espera correlacionar a
+				// resposta ficava sem nada e podia tratar como falha de rede.
+				if ( $is_notification ) {
+					return new WP_REST_Response( null, 202 );
+				}
+				return $this->rpc_result( $id, array() );
 
 			case 'ping':
 				return $this->rpc_result( $id, array() );
