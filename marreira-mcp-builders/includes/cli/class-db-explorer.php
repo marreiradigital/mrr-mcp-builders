@@ -209,10 +209,15 @@ class DB_Explorer {
 		if ( is_wp_error( $check ) ) {
 			return $check;
 		}
-		$sql = $check;
+		// $sql = o original validado (o que roda). $probe = copia com as strings
+		// literais esvaziadas, so para analise.
+		$sql   = $check['sql'];
+		$probe = $check['probe'];
 
-		// Aplica LIMIT maximo de 1000 se nao houver.
-		if ( ! preg_match( '/\blimit\s+\d+/i', $sql ) ) {
+		// Aplica LIMIT maximo de 1000 se nao houver. A checagem vai no probe: no
+		// SQL original um literal como WHERE t = 'limit 5' faria o LIMIT parecer
+		// presente e a query voltaria sem teto de linhas.
+		if ( ! preg_match( '/\blimit\s+\d+/i', $probe ) ) {
 			$sql .= ' LIMIT 1000';
 		}
 
@@ -279,21 +284,41 @@ class DB_Explorer {
 	}
 
 	/**
-	 * Garante SQL somente-leitura. Rejeita multiplas instrucoes, comentarios
-	 * com keywords e tokens perigosos.
+	 * Garante SQL somente-leitura. Rejeita multiplas instrucoes, comentarios e
+	 * tokens perigosos.
+	 *
+	 * Devolve o SQL ORIGINAL (para executar) e o probe (para analise). O probe e
+	 * uma copia com o conteudo das strings literais esvaziado, usada so para
+	 * procurar keywords sem falso positivo (ex.: WHERE t = 'UPDATE ...'). O probe
+	 * NUNCA pode ser o SQL executado: 'publish' viraria '' e a query devolveria
+	 * dados errados em silencio.
 	 *
 	 * @param string $sql SQL.
-	 * @return string|\WP_Error
+	 * @return array{sql:string,probe:string}|\WP_Error
 	 */
 	private static function validate_select( string $sql ) {
 		$sql = trim( $sql );
-		// Remove comentarios SQL para analise.
-		$probe = preg_replace( '#/\*.*?\*/#s', ' ', $sql );
-		$probe = preg_replace( '/--[^\n]*\n?/', ' ', (string) $probe );
-		$probe = preg_replace( '/\#[^\n]*\n?/', ' ', (string) $probe );
-		// Esvazia o conteudo de strings literais antes de procurar keywords
-		// perigosas, para evitar falso positivo (ex.: WHERE t = 'UPDATE ...').
-		$probe = preg_replace( "/'(?:\\\\.|''|[^'\\\\])*'/s", "''", (string) $probe );
+
+		if ( '' === $sql ) {
+			return new \WP_Error( 'mmcb_bad_sql', __( 'SQL vazio.', 'marreira-mcp-builders' ), array( 'status' => 400 ) );
+		}
+
+		// Comentarios SQL sao recusados — e por seguranca, nao por estilo. O MySQL
+		// EXECUTA comentarios versionados (/*!40000 DROP TABLE x */): analisar o
+		// SQL com os comentarios removidos e depois executar o original deixaria
+		// passar exatamente as keywords barradas abaixo. Recusar de saida mantem
+		// probe e SQL executado equivalentes token a token. Valores vao por
+		// placeholder ($args + wpdb::prepare), nao embutidos junto de comentario.
+		if ( preg_match( '#/\*|--|\##', $sql ) ) {
+			return new \WP_Error(
+				'mmcb_sql_comment',
+				__( 'Comentarios SQL (--, #, /* */) nao sao aceitos. Passe valores por placeholder.', 'marreira-mcp-builders' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Esvazia o conteudo de strings literais APENAS para a analise abaixo.
+		$probe = preg_replace( "/'(?:\\\\.|''|[^'\\\\])*'/s", "''", $sql );
 		$probe = preg_replace( '/"(?:\\\\.|""|[^"\\\\])*"/s', '""', (string) $probe );
 		$probe = trim( (string) $probe );
 
@@ -329,7 +354,12 @@ class DB_Explorer {
 			}
 		}
 
-		return $trimmed;
+		// O que sai daqui pra execucao e o SQL ORIGINAL (so sem o ; final); o
+		// probe fica disponivel para checagens que nao podem cair em literal.
+		return array(
+			'sql'   => rtrim( $sql, " \t\n\r;" ),
+			'probe' => $trimmed,
+		);
 	}
 
 	/**

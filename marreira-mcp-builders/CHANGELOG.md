@@ -27,6 +27,33 @@ seção `== Changelog ==` do `readme.txt`).
 
 ---
 
+## [1.5.0] - 2026-07-16
+
+Lote de correções vindas de uma auditoria completa do plugin (OAuth, autenticação,
+MCP/CLI e drivers de builder).
+
+### Corrigido
+
+- **`/cli/db/query` executava um SQL diferente do pedido, devolvendo dados errados
+  em silêncio.** Para procurar keywords perigosas sem falso positivo (ex.:
+  `WHERE t = 'UPDATE ...'`), `validate_select()` monta um "probe" com o conteúdo
+  das strings literais esvaziado — e devolvia o **probe** em vez do SQL original.
+  `WHERE post_status = 'publish'` virava `WHERE post_status = ''`. Toda query com
+  literal (`=`, `LIKE`, `IN`) voltava vazia ou errada, sem erro nenhum: a IA
+  concluía que a tabela estava vazia. Agora o probe serve só para a análise e o
+  SQL executado é o original.
+- **Comentários SQL passam a ser recusados em `/cli/db/query`.** Não é preferência
+  de estilo: o MySQL *executa* comentários versionados (`/*!40000 DROP TABLE x */`).
+  Como a análise removia os comentários, passar a executar o SQL original abriria um
+  bypass de todas as checagens de keyword. Recusar de saída mantém o que é analisado
+  e o que é executado equivalentes token a token. (O código anterior não tinha esse
+  furo apenas por acidente — ele executava o probe, já sem comentários.)
+- **Detecção de `LIMIT` deixou de cair em literal.** `WHERE t = 'limit 5'` fazia o
+  `LIMIT` parecer presente e a query voltava sem teto de 1000 linhas. A checagem
+  agora usa o probe.
+
+---
+
 ## [1.4.0] - 2026-07-16
 
 ### Corrigido

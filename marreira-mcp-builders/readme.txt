@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -151,6 +151,16 @@ instale este no lugar.
 Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 == Changelog ==
+
+= 1.5.0 =
+Lote de correções vindas de uma auditoria completa do plugin.
+* Correção grave: `/cli/db/query` executava um SQL diferente do pedido. As strings
+  literais eram esvaziadas para análise e a versão esvaziada é que era executada —
+  `WHERE post_status = 'publish'` virava `= ''`. Toda query com literal voltava
+  vazia ou errada, sem erro.
+* `/cli/db/query` agora recusa comentários SQL: o MySQL executa comentários
+  versionados (`/*!...*/`), o que contornaria as checagens de keyword.
+* Detecção de `LIMIT` não cai mais em literal (`WHERE t = 'limit 5'`).
 
 = 1.4.0 =
 * Correção: erro fatal na ativação em PHP anterior a 8.2 ("Cannot use 'true' as
