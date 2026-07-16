@@ -1,0 +1,75 @@
+name: Compatibilidade PHP
+
+# Guard de compatibilidade: roda `php -l` em todos os arquivos do plugin em
+# cada versao de PHP suportada. A versao MAIS BAIXA da matriz tem que bater
+# com o "Requires PHP" do header do plugin (marreira-mcp-builders.php) e com
+# o "Requires PHP" do readme.txt.
+#
+# Por que existe: um tipo de retorno `true|\WP_Error` (valido so a partir do
+# PHP 8.2) entrou num plugin que declarava PHP 8.0 e derrubou o site de um
+# usuario com "Cannot use 'true' as class name as it is reserved". Nada barrava
+# isso antes de chegar em producao.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: php -l (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 7.4 = piso declarado no header. 8.0/8.1 pegam o erro do tipo literal
+        # `true`. 8.3/8.4 pegam depreciacoes de sintaxe nas versoes novas.
+        php: ['7.4', '8.0', '8.1', '8.3', '8.4']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instala PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Lint de sintaxe
+        run: bash scripts/lint-php.sh
+
+  requires-php:
+    name: Header bate com o piso da matriz
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Se alguem subir o "Requires PHP" sem subir a matriz (ou vice-versa), o
+      # lint passaria numa versao que o plugin nem diz suportar. Este job trava
+      # os dois juntos.
+      - name: Confere Requires PHP do header e do readme
+        run: |
+          set -euo pipefail
+          floor='7.4'
+
+          header="$(grep -oP '^\s*\*\s*Requires PHP:\s*\K[0-9.]+' marreira-mcp-builders/marreira-mcp-builders.php)"
+          readme="$(grep -oP '^Requires PHP:\s*\K[0-9.]+' marreira-mcp-builders/readme.txt)"
+
+          echo "matriz (piso): $floor"
+          echo "header do plugin: $header"
+          echo "readme.txt: $readme"
+
+          if [ "$header" != "$floor" ] || [ "$readme" != "$floor" ]; then
+            echo "::error::Requires PHP dessincronizado. Header=$header readme=$readme piso da matriz=$floor. Atualize os tres juntos (inclusive a matriz em .github/workflows/php-compat.yml)."
+            exit 1
+          fi
+
+          echo "OK: Requires PHP sincronizado em $floor."

@@ -1,6 +1,9 @@
 # Scripts shell sempre com fim de linha LF (bash do Linux quebra com CRLF).
 *.sh text eol=lf
 
+# Workflows do GitHub Actions rodam no Linux — LF sempre.
+*.yml text eol=lf
+
 # Normaliza fim de linha de arquivos de texto no repo.
 *.php text
 *.md text
