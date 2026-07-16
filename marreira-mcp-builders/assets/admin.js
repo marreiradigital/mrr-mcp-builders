@@ -10,6 +10,39 @@
 	var root  = document.getElementById( 'mmcb-app' );
 	if ( ! root ) { return; }
 
+	// ---- tema claro/escuro ----
+	// Sem preferência salva, a media query prefers-color-scheme do CSS decide.
+	// Roda síncrono, antes de qualquer render, para não piscar o tema errado.
+	var THEME_KEY = 'mmcb-admin-theme';
+
+	function initTheme() {
+		try {
+			var stored = localStorage.getItem( THEME_KEY );
+			if ( stored === 'dark' || stored === 'light' ) {
+				root.setAttribute( 'data-mmcb-theme', stored );
+			}
+		} catch ( e ) { /* localStorage indisponível: segue o sistema */ }
+	}
+
+	function currentTheme() {
+		var forced = root.getAttribute( 'data-mmcb-theme' );
+		if ( forced === 'dark' || forced === 'light' ) { return forced; }
+		return ( window.matchMedia && window.matchMedia( '(prefers-color-scheme: dark)' ).matches ) ? 'dark' : 'light';
+	}
+
+	function toggleTheme() {
+		var next = currentTheme() === 'dark' ? 'light' : 'dark';
+		root.setAttribute( 'data-mmcb-theme', next );
+		try { localStorage.setItem( THEME_KEY, next ); } catch ( e ) { /* sem persistência */ }
+	}
+
+	function themeToggleBtn() {
+		return '<button class="mmcb-theme-toggle" type="button" data-action="toggle-theme" ' +
+			'aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">◐</button>';
+	}
+
+	initTheme();
+
 	// ---- estado global ----
 	var state = {
 		status:       null,
@@ -353,7 +386,7 @@
 		return '<header class="mmcb-topbar">' +
 			'<div class="mmcb-logo" aria-hidden="true"><span></span><span></span><span></span><span></span></div>' +
 			'<div><h1>MarreiraMCP Builders</h1><p class="mmcb-sub">Servidor MCP unificado para Bricks Builder &amp; Elementor</p></div>' +
-			'<div class="mmcb-badges">' + b + '</div>' +
+			'<div class="mmcb-badges">' + b + themeToggleBtn() + '</div>' +
 			'</header>';
 	}
 
@@ -853,6 +886,12 @@
 	// =========================================================================
 
 	root.addEventListener( 'click', function ( ev ) {
+		// Toggle de tema — funciona em qualquer tela (wizard ou app).
+		if ( ev.target.closest( '.mmcb-theme-toggle' ) ) {
+			toggleTheme();
+			return;
+		}
+
 		// Wizard — passa primeiro
 		if ( ! state.status || ! state.status.onboarding_done ) {
 			handleWizardClick( ev );

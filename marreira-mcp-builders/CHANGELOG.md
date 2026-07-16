@@ -57,6 +57,11 @@ lote — que é o que se lê para decidir se atualiza.
   foram preservados; entram componentes novos para o wizard guiado (termo,
   cards de escolha de conexão, checklist, timeline, stepper com rótulos).
 
+- **Toggle de tema claro/escuro no painel.** Botão no topo alterna o tema e a
+  escolha persiste em `localStorage`; sem escolha salva, o painel segue o tema do
+  sistema. A inicialização roda antes do primeiro render para não piscar o tema
+  errado.
+
 - **SKILL (ambas as variantes): regra explícita de interface completa em um
   `run_batch`.** Montar/estilizar uma página inteira é o cenário clássico em que
   hosts/WAFs com rate-limit agressivo derrubam a 2ª/3ª requisição e a página fica
