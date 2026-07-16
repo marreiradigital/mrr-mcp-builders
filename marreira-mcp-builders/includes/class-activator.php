@@ -35,6 +35,15 @@ class Activator {
 	const VERSION_OPTION = MMCB_OPTION_PREFIX . 'db_version';
 
 	/**
+	 * Option com o registro de aceite do Termo de Responsabilidade
+	 * (user_id, timestamp, versao do termo, IP). Criada apenas no primeiro
+	 * aceite, sempre com autoload false.
+	 *
+	 * @var string
+	 */
+	const TERMS_OPTION = MMCB_OPTION_PREFIX . 'terms_acceptance';
+
+	/**
 	 * Versao do schema do banco. Incrementar quando as tabelas mudarem.
 	 *
 	 * @var string

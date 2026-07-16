@@ -55,6 +55,11 @@ define( 'MMCB_OAUTH_BASE_PATH', '/marreira-mcp-oauth' );
 // suportada (ver MCP_Server::SUPPORTED_PROTOCOL_VERSIONS), senao devolve esta.
 define( 'MMCB_MCP_PROTOCOL_VERSION', '2025-06-18' );
 
+// Versao do texto do Termo de Responsabilidade exibido no painel. Incrementar
+// quando o texto mudar substancialmente: o aceite gravado fica atrelado a esta
+// versao e o painel volta a exigir o aceite de todos os administradores.
+define( 'MMCB_TERMS_VERSION', '1' );
+
 // ---------------------------------------------------------------------------
 // Autoloader simples (PSR-ish) mapeando o namespace para /includes.
 // Marreira\MCP_Builders\Auth\Token_Manager  => includes/auth/class-token-manager.php

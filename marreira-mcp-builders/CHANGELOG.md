@@ -19,7 +19,20 @@ lote — que é o que se lê para decidir se atualiza.
 
 ## [Unreleased]
 
-_Nada ainda._
+### Adicionado
+
+- **Termo de Responsabilidade com aceite obrigatório no painel.** O plugin executa
+  o que o modelo de IA conectado mandar — quem responde pela escolha do modelo, das
+  abilities e dos poderes ativados é o administrador, e isso precisa ficar
+  juridicamente explícito antes de qualquer configuração. O primeiro acesso ao
+  painel agora exige o aceite (novas instalações: passo 0 do wizard; instalações
+  existentes: tela de aceite única antes de cair no painel). O aceite é registrado
+  na option `mmcb_terms_acceptance` (autoload false) com usuário, data/hora, IP e
+  versão do termo, e entra no audit log (`terms:accepted`). A constante
+  `MMCB_TERMS_VERSION` versiona o texto: bump = re-exigir aceite de todos. Os
+  endpoints MCP **não** são bloqueados — integrações existentes continuam
+  funcionando; o gate é só do painel. Nova action AJAX `mmcb_accept_terms` e bloco
+  `terms` no payload de status. A desinstalação remove o registro.
 
 ---
 

@@ -15,6 +15,7 @@ global $wpdb;
 // Options do plugin.
 delete_option( 'mmcb_settings' );
 delete_option( 'mmcb_db_version' );
+delete_option( 'mmcb_terms_acceptance' );
 
 // Tabelas do plugin. Precisa listar TODAS — as duas de OAuth ficaram de fora
 // quando foram criadas (1.3.x) e sobreviviam a desinstalacao, guardando

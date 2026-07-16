@@ -62,6 +62,7 @@ class Admin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 
 		add_action( 'wp_ajax_mmcb_status', array( $this, 'ajax_status' ) );
+		add_action( 'wp_ajax_mmcb_accept_terms', array( $this, 'ajax_accept_terms' ) );
 		add_action( 'wp_ajax_mmcb_complete_onboarding', array( $this, 'ajax_complete_onboarding' ) );
 		add_action( 'wp_ajax_mmcb_save_settings', array( $this, 'ajax_save_settings' ) );
 		add_action( 'wp_ajax_mmcb_switch_builder', array( $this, 'ajax_switch_builder' ) );
@@ -190,8 +191,24 @@ class Admin {
 		$registry = MCP_Server::build_registry();
 		$defs     = $registry->definitions();
 
+		// Aceite do Termo de Responsabilidade: so vale se a versao gravada
+		// coincidir com a exigida — bump em MMCB_TERMS_VERSION re-exige aceite.
+		$terms_record   = get_option( Activator::TERMS_OPTION, array() );
+		$terms_required = MMCB_TERMS_VERSION;
+		$terms_accepted = is_array( $terms_record )
+			&& ! empty( $terms_record['accepted'] )
+			&& isset( $terms_record['version'] )
+			&& (string) $terms_record['version'] === $terms_required;
+
 		return array(
 			'plugin_version'     => MMCB_VERSION,
+			'terms'              => array(
+				'required_version' => $terms_required,
+				'accepted'         => $terms_accepted,
+				'accepted_version' => ( is_array( $terms_record ) && ! empty( $terms_record['version'] ) ) ? (string) $terms_record['version'] : null,
+				'accepted_at'      => ( is_array( $terms_record ) && ! empty( $terms_record['timestamp'] ) ) ? (string) $terms_record['timestamp'] : null,
+				'accepted_user_id' => ( is_array( $terms_record ) && ! empty( $terms_record['user_id'] ) ) ? (int) $terms_record['user_id'] : null,
+			),
 			'active_builder'     => (string) $settings['active_builder'],
 			'available_builders' => Builder_Manager::detect_available(),
 			'builders'           => $builders,
@@ -250,6 +267,50 @@ class Admin {
 	 */
 	public function ajax_status() {
 		$this->verify();
+		wp_send_json_success( $this->status_payload() );
+	}
+
+	/**
+	 * AJAX: registra o aceite do Termo de Responsabilidade.
+	 *
+	 * Exige que a versao enviada coincida com MMCB_TERMS_VERSION — um POST
+	 * antigo nao pode registrar aceite de uma versao mais nova do termo.
+	 * Grava quem aceitou, quando e de qual IP, e registra no audit log.
+	 *
+	 * @return void
+	 */
+	public function ajax_accept_terms() {
+		$this->verify();
+
+		$version = isset( $_POST['terms_version'] ) ? sanitize_key( wp_unslash( $_POST['terms_version'] ) ) : '';
+		if ( $version !== MMCB_TERMS_VERSION ) {
+			wp_send_json_error( array( 'message' => __( 'Versão do termo inválida. Recarregue a página e tente novamente.', 'marreira-mcp-builders' ) ), 400 );
+		}
+
+		$user_id = get_current_user_id();
+		$record  = array(
+			'accepted'      => true,
+			'user_id'       => $user_id,
+			'timestamp'     => current_time( 'mysql' ),
+			'timestamp_gmt' => current_time( 'mysql', true ),
+			'version'       => MMCB_TERMS_VERSION,
+			'ip'            => Audit_Log::client_ip(),
+		);
+		update_option( Activator::TERMS_OPTION, $record, false );
+
+		Audit_Log::log(
+			array(
+				'method'           => 'AJAX',
+				'route'            => 'admin/accept_terms',
+				'action'           => 'terms:accepted',
+				'status_code'      => 200,
+				'user_id'          => $user_id,
+				'ip'               => Audit_Log::client_ip(),
+				'response_summary' => 'Termo de Responsabilidade v' . MMCB_TERMS_VERSION . ' aceito pelo usuario #' . $user_id . '.',
+				'success'          => true,
+			)
+		);
+
 		wp_send_json_success( $this->status_payload() );
 	}
 
