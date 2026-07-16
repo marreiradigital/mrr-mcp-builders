@@ -754,6 +754,8 @@ class Rest_Controller {
 			array( 'method' => 'DELETE', 'path' => '/cli/snippets/{id}',                                   'ability' => 'snippets', 'enabled' => $cli_on ),
 			array( 'method' => 'POST',   'path' => '/cli/snippets/{id}/toggle',                            'ability' => 'snippets', 'enabled' => $cli_on ),
 			array( 'method' => 'GET',    'path' => '/cli/users',                                           'ability' => 'read',     'enabled' => $cli_on ),
+			array( 'method' => 'GET',    'path' => '/cli/users/{id}',                                      'ability' => 'read',     'enabled' => $cli_on ),
+			array( 'method' => 'POST',   'path' => '/cli/users/{id}/meta',                                 'ability' => 'options',  'enabled' => $cli_on ),
 			array( 'method' => 'GET',    'path' => '/cli/logs',                                            'ability' => 'read',     'enabled' => $cli_on ),
 			array( 'method' => 'POST',   'path' => '/cli/exec/php',                                        'ability' => 'exec',     'enabled' => $exec_on, 'note' => 'requer allow_php_exec' ),
 			array( 'method' => 'GET',    'path' => '/cli/posts',                                           'ability' => 'content',  'enabled' => $cli_on ),
@@ -776,6 +778,9 @@ class Rest_Controller {
 			array( 'method' => 'GET',    'path' => '/cli/db/tables/{name}/sample',                         'ability' => 'db',       'enabled' => $cli_on ),
 			array( 'method' => 'GET',    'path' => '/cli/db/relations',                                    'ability' => 'db',       'enabled' => $cli_on ),
 			array( 'method' => 'POST',   'path' => '/cli/db/query',                                        'ability' => 'db_query', 'enabled' => $qry_on, 'note' => 'requer allow_db_query' ),
+			array( 'method' => 'GET',    'path' => '/cli/options',                                         'ability' => 'options',  'enabled' => $cli_on, 'note' => 'name | names | search' ),
+			array( 'method' => 'POST',   'path' => '/cli/options',                                         'ability' => 'options',  'enabled' => $cli_on, 'note' => 'name + value (+ autoload)' ),
+			array( 'method' => 'DELETE', 'path' => '/cli/options',                                         'ability' => 'options',  'enabled' => $cli_on, 'note' => 'name' ),
 		);
 
 		return rest_ensure_response( array(
@@ -788,7 +793,10 @@ class Rest_Controller {
 				'header' => 'Authorization: Bearer <token>',
 				'alt'    => 'X-MMCB-Token: <token>',
 			),
-			'abilities'  => array( '*', 'plugins', 'themes', 'core', 'files', 'snippets', 'content', 'db', 'db_query', 'read', 'exec', 'builder', 'cli' ),
+			'abilities'  => array( '*', 'plugins', 'themes', 'core', 'files', 'snippets', 'content', 'options', 'db', 'db_query', 'read', 'exec', 'builder', 'cli' ),
+			'mcp_tools_note' => $cli_on
+				? 'Com o CLI ligado, estas operacoes tambem aparecem como tools MCP (wp_*) em tools/list.'
+				: 'Ligue enable_general_cli para expor estas operacoes como tools MCP (wp_*) em tools/list.',
 			'routes'     => $routes,
 		) );
 	}

@@ -154,12 +154,43 @@ O painel configura um `ai_tier` que muda como você deve consumir contexto:
 
 ## 7. CLI geral de WordPress (opcional, desligado de fábrica)
 
-Além do builder, o plugin expõe um CLI de WordPress em
-`/wp-json/marreira-mcp/v1/cli/...` (plugins, temas, core, arquivos do tema,
-snippets, conteúdo, leitura de banco, exec). **Vem desligado**: o dono precisa
-ativar `enable_general_cli` no painel, e os poderes perigosos (`exec/php`,
-`db/query`, escrita de arquivo) têm trava dupla (flag + ability do token). Cada
-rota exige a ability correspondente. Consulte `GET /cli/describe`.
+Além do builder, o plugin expõe um CLI completo de WordPress: plugins, temas,
+core, arquivos do tema, snippets, conteúdo (posts de **qualquer** tipo, termos,
+comentários, mídia), **options** (a configuração de plugins de terceiros),
+**meta** (inclusive privada: `_price`, `_sku`, `_yoast_*`, campos ACF), usuários,
+leitura de banco e `exec/php`. **Vem desligado**: o dono precisa ativar
+`enable_general_cli` no painel, e os poderes perigosos (`exec/php`, `db/query`,
+escrita de arquivo) têm trava dupla (flag + ability do token). Cada operação
+exige a ability correspondente. Consulte `GET /cli/describe`.
+
+### Duas formas de usar o CLI
+
+1. **Como tools MCP (preferível).** Com o CLI ligado, as operações aparecem em
+   `tools/list` com o prefixo `wp_` e você as chama por `tools/call` como
+   qualquer outra tool — sem montar requisições HTTP. Exemplos:
+   `wp_list_plugins`, `wp_activate_plugin`, `wp_create_post`, `wp_update_option`,
+   `wp_get_option`, `wp_list_options`, `wp_db_query`, `wp_get_user`,
+   `wp_exec_php`. Se você é um conector (Claude.ai/ChatGPT), **este é o único
+   caminho** — e as tools só aparecem quando o dono liga o CLI.
+2. **Como rotas REST** em `/wp-json/marreira-mcp/v1/cli/...` — para clientes que
+   fazem HTTP direto (Claude Code, curl, n8n). Mesmas travas.
+
+### Configurar plugins de terceiros (options)
+
+A configuração de praticamente todo plugin (WooCommerce, Yoast, WPForms…) mora em
+`wp_options`. Use `wp_list_options` com `search` (ex.: `woocommerce`) para
+descobrir as chaves, `wp_get_option` para ler e `wp_update_option` para gravar.
+Requer a ability `options` + `enable_general_cli`. Segredos (chaves/senhas) saem
+redigidos na leitura; as options do próprio MarreiraMCP são protegidas.
+
+### Dados de terceiros (meta)
+
+Os plugins guardam dados em post/term/user **meta**, muitas vezes em chaves
+privadas (prefixo `_`). Em `wp_create_post`/`wp_update_post`, o campo `meta`
+aceita chaves privadas (ex.: `{"_price":"99.90","_sku":"ABC"}`). Em
+`wp_get_post`, use `include_private:true` para trazê-las. Termos aceitam `meta`;
+`wp_set_user_meta` grava meta de usuário (capabilities/nível/sessão são
+bloqueados — sem escalonamento de privilégio).
 
 **Restrições que valem a pena saber antes de chamar:**
 
@@ -186,7 +217,9 @@ Todos os endpoints expostos pelo plugin:
 | `/wp-json/marreira-mcp/v1/mcp` | POST | Bearer (token ou OAuth) | Dispatch JSON-RPC 2.0 (initialize, tools/list, tools/call, ping) |
 | `/wp-json/marreira-mcp/v1/skill` | GET | pública | Esta documentação |
 | `/wp-json/marreira-mcp/v1/describe` | GET | Bearer | Auto-descoberta: builder, tier, abilities, tools |
-| `/wp-json/marreira-mcp/v1/cli/...` | GET/POST/PUT/DELETE | Bearer + ability | CLI geral de WordPress (desligado de fábrica) |
+| `/wp-json/marreira-mcp/v1/cli/...` | GET/POST/PUT/DELETE | Bearer + ability | CLI geral de WordPress (desligado de fábrica). Com o CLI ligado, as mesmas operações aparecem como tools MCP `wp_*` em `tools/list` |
+| `/wp-json/marreira-mcp/v1/cli/options` | GET/POST/DELETE | Bearer + `options` | Ler/buscar, escrever e remover `wp_options` (config de plugins) |
+| `/wp-json/marreira-mcp/v1/cli/users/{id}` | GET | Bearer + `read` | Usuário com meta (sessões/segredos redigidos) |
 | `/wp-json/marreira-mcp/v1/cli/describe` | GET | Bearer | Lista as rotas `/cli/*` e seu estado |
 | `/wp-json/marreira-mcp/v1/cli/status` | GET | Bearer | Health-check (versão, PHP, WP, cli_enabled) |
 | `/wp-json/marreira-mcp/v1/cli/site` | GET | Bearer | Resumo do site |
@@ -211,4 +244,8 @@ isso sozinho ao adicionar o conector (seção 1b).
 - Token só como hash (HMAC-SHA256); escopos por token; expiração; throttle por
   IP; IP allowlist; o dono do token precisa continuar admin.
 - Toda requisição é auditada (com mascaramento de dados sensíveis).
-- O CLI não desativa/remove o próprio plugin nem apaga o tema ativo.
+- O CLI não desativa/remove o próprio plugin nem apaga o tema ativo. Também não
+  altera/remove as options do próprio plugin, e não escreve as chaves de
+  capabilities/nível/sessão em user meta (sem escalonamento de privilégio).
+- Options e meta com nome sensível (chaves/senhas/segredos/sessões) saem
+  redigidas na leitura.

@@ -56,6 +56,15 @@ lote — que é o que se lê para decidir se atualiza.
   delega ao mesmo método REST (sem duplicar lógica) e é registrada apenas quando
   o CLI está ligado, para não poluir o `tools/list` por padrão.
 
+### Documentação
+
+- **SKILL, `/cli/describe` e painel atualizados.** A SKILL (completa e enxuta)
+  ganhou a seção de como usar o CLI por tools MCP `wp_*`, configurar plugins por
+  options e gravar meta privada. O `/cli/describe` lista as rotas novas
+  (`/cli/options`, `/cli/users/{id}`, `/cli/users/{id}/meta`), a ability
+  `options` e uma nota sobre a exposição como tools MCP. O formulário de token do
+  painel passou a oferecer a ability `options`.
+
 ### Segurança
 
 - **Autorização por-tool no `Tool_Registry`.** A checagem de ability saiu do

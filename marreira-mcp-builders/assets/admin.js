@@ -140,7 +140,7 @@
 	// WIZARD GUIADO (ramificado) + TERMO DE RESPONSABILIDADE
 	// =========================================================================
 
-	var KNOWN_ABILITIES = [ '*', 'builder', 'read', 'content', 'plugins', 'themes', 'core', 'files', 'snippets', 'db', 'db_query', 'exec', 'cli' ];
+	var KNOWN_ABILITIES = [ '*', 'builder', 'read', 'content', 'plugins', 'themes', 'core', 'files', 'snippets', 'options', 'db', 'db_query', 'exec', 'cli' ];
 
 	// O wizard está visível quando: o termo ainda não foi aceito, o onboarding
 	// não terminou, ou o usuário abriu o "Rever guia".
