@@ -766,7 +766,10 @@
 		return '<header class="mmcb-topbar">' +
 			'<div class="mmcb-logo" aria-hidden="true"><span></span><span></span><span></span><span></span></div>' +
 			'<div><h1>MarreiraMCP Builders</h1><p class="mmcb-sub">Servidor MCP unificado para Bricks Builder &amp; Elementor</p></div>' +
-			'<div class="mmcb-badges">' + b + themeToggleBtn() + '</div>' +
+			'<div class="mmcb-badges">' + b +
+				'<button class="mmcb-btn mmcb-btn-sm mmcb-guide-btn" data-action="open-guide" title="Reabrir o guia de conexão passo a passo">↺ Rever guia</button>' +
+				themeToggleBtn() +
+			'</div>' +
 			'</header>';
 	}
 
@@ -814,18 +817,24 @@
 			'<button class="' + ( s.ai_tier === 'economy' ? 'active' : '' ) + '" data-action="set-tier" data-tier="economy">Economy</button>' +
 		'</div>';
 
-		// Endpoints
-		function epRow( label, url, id ) {
+		// Endpoints — a skill vem primeiro: é o ponto de entrada recomendado.
+		function epRow( label, url, id, hint ) {
 			return '<div class="mmcb-field"><label>' + esc( label ) + '</label>' +
 				'<div class="mmcb-copy-row"><code class="mmcb-code" id="' + id + '">' + esc( url ) + '</code>' +
-				'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#' + id + '">Copiar</button></div></div>';
+				'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#' + id + '">Copiar</button></div>' +
+				( hint ? '<p class="description">' + esc( hint ) + '</p>' : '' ) +
+			'</div>';
 		}
 
 		var endpoints =
-			epRow( 'Endpoint MCP (POST, JSON-RPC 2.0)', ep.mcp || '', 'mmcb-ep-mcp' ) +
-			epRow( 'Skill (GET, Markdown para a IA)', ep.skill || '', 'mmcb-ep-skill' ) +
-			epRow( 'Describe (GET, auto-descoberta)', ep.describe || '', 'mmcb-ep-desc' ) +
-			epRow( 'CLI (POST)', ep.cli || '', 'mmcb-ep-cli' );
+			epRow( 'Skill (GET, documentação para a IA) — comece por aqui', ep.skill || '', 'mmcb-ep-skill',
+				'Passe esta URL para a IA: o documento sai com o domínio real do site e lista todos os endpoints — você não precisa ditar mais nada.' ) +
+			epRow( 'Endpoint MCP (POST, JSON-RPC 2.0)', ep.mcp || '', 'mmcb-ep-mcp',
+				'A URL que o cliente MCP (Claude Code, Cursor, conector) usa para chamar as ferramentas.' ) +
+			epRow( 'Describe (GET, auto-descoberta — exige token)', ep.describe || '', 'mmcb-ep-desc',
+				'Builder ativo, tier, abilities do token e catálogo de tools em JSON.' ) +
+			epRow( 'CLI (POST — desligado de fábrica)', ep.cli || '', 'mmcb-ep-cli',
+				'CLI geral de WordPress. Só funciona com a flag ligada nas configurações e a ability no token.' );
 
 		return '<div class="mmcb-grid cols-2">' +
 			'<section class="mmcb-card">' +
@@ -843,8 +852,16 @@
 			'</section>' +
 			'<section class="mmcb-card mmcb-span-2">' +
 				'<h2>Endpoints</h2>' +
-				'<p class="mmcb-hint">Use a URL do endpoint MCP na configuração do agente de IA.</p>' +
+				'<p class="mmcb-hint">A skill é o ponto de entrada: ela documenta o servidor e lista todos os endpoints já com o seu domínio.</p>' +
 				endpoints +
+			'</section>' +
+			'<section class="mmcb-card mmcb-span-2">' +
+				'<h2>Instruções para a IA</h2>' +
+				'<p class="mmcb-hint">Bloco pronto para colar no seu cliente de IA (Claude Code, Cursor, VS Code…). Troque SEU_TOKEN por um token da aba Tokens.</p>' +
+				'<pre class="mmcb-instructions-block" id="mmcb-ai-instr">' + esc( aiInstructions( null ) ) + '</pre>' +
+				'<div class="mmcb-actions" style="margin-top:0">' +
+					'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#mmcb-ai-instr">Copiar instruções completas</button>' +
+				'</div>' +
 			'</section>' +
 			'<section class="mmcb-card mmcb-span-2">' +
 				'<h2>Autoteste</h2>' +
@@ -1311,6 +1328,16 @@
 		var act = ev.target.closest( '[data-action]' );
 		if ( ! act ) { return; }
 		var action = act.getAttribute( 'data-action' );
+
+		// Reabrir o guia de conexão (sem re-exigir termo nem refazer onboarding)
+		if ( action === 'open-guide' ) {
+			state.wizard.guideMode = true;
+			state.wizard.step      = 'branch';
+			state.wizard.branch    = '';
+			state.wizard.token     = null;
+			renderWizard();
+			return;
+		}
 
 		// Switch builder
 		if ( action === 'switch-builder' ) {

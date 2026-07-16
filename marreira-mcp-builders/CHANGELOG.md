@@ -46,6 +46,14 @@ lote — que é o que se lê para decidir se atualiza.
   token gerado). Instalações existentes que atualizarem veem só a tela de aceite
   uma única vez e caem direto no painel.
 
+- **Botão "Rever guia" e painel com a skill em primeiro lugar.** O guia de
+  conexão pode ser reaberto a qualquer momento pelo topo do painel — direto na
+  escolha token × conector, sem re-exigir o termo nem refazer o onboarding. Na
+  aba Painel, os endpoints foram reordenados com a **skill primeiro** (cada um
+  com uma linha explicando para que serve) e entrou o card **"Instruções para a
+  IA"**: um bloco pronto para colar no cliente de IA com a URL da skill, o
+  endpoint MCP e o snippet de `mcpServers`, tudo já com o domínio real do site.
+
 - **Skill dinâmica: `GET /skill` sai com as URLs reais do site.** O documento era
   servido com o placeholder literal `SEU-SITE`, obrigando a IA a inferir o domínio
   (ou o usuário a ditar endpoint por endpoint). Agora o servidor substitui
