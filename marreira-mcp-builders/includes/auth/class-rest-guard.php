@@ -202,10 +202,16 @@ class Rest_Guard {
 		if ( is_ssl() ) {
 			return true;
 		}
-		if ( defined( 'MMCB_TRUST_PROXY' ) && MMCB_TRUST_PROXY && ! empty( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) ) {
+
+		// X-Forwarded-Proto so vale vindo de um proxy confiavel — senao qualquer
+		// um manda "X-Forwarded-Proto: https" numa conexao HTTP em claro e passa
+		// pelo HTTPS-only, com o token Bearer trafegando exposto.
+		$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( Audit_Log::proxy_is_trusted( $remote ) && ! empty( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) ) {
 			$proto = strtolower( trim( explode( ',', (string) wp_unslash( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) )[0] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			return 'https' === $proto;
 		}
+
 		return false;
 	}
 

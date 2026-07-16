@@ -238,18 +238,59 @@ class Audit_Log {
 	 * @return string
 	 */
 	public static function client_ip() {
-		if ( defined( 'MMCB_TRUST_PROXY' ) && MMCB_TRUST_PROXY ) {
-			foreach ( array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR' ) as $header ) {
-				if ( ! empty( $_SERVER[ $header ] ) ) {
-					$value = explode( ',', (string) wp_unslash( $_SERVER[ $header ] ) )[0]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-					$value = trim( $value );
-					if ( '' !== $value ) {
-						return $value;
-					}
-				}
+		$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+
+		if ( ! self::proxy_is_trusted( $remote ) ) {
+			return $remote;
+		}
+
+		foreach ( array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR' ) as $header ) {
+			if ( empty( $_SERVER[ $header ] ) ) {
+				continue;
+			}
+			$value = explode( ',', (string) wp_unslash( $_SERVER[ $header ] ) )[0]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			$value = trim( $value );
+
+			// So aceita se for IP de verdade. Antes qualquer string passava direto
+			// para o throttle, para a allowlist e para o audit log.
+			if ( filter_var( $value, FILTER_VALIDATE_IP ) ) {
+				return $value;
 			}
 		}
-		return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+
+		return $remote;
+	}
+
+	/**
+	 * O IP de origem da conexao e um proxy em que confiamos?
+	 *
+	 * Headers de proxy sao texto que o cliente escreve: so valem se quem os
+	 * entregou for de fato o proxy. Sem esta checagem, um atacante que alcance a
+	 * origem direto (sem passar pelo Cloudflare/nginx) manda
+	 * "X-Real-IP: <ip da allowlist>" e entra, ou rotaciona IPs forjados e nunca
+	 * atinge o throttle.
+	 *
+	 * MMCB_TRUST_PROXY aceita:
+	 *   - lista de IPs (string separada por virgula/espaco, ou array): so confia
+	 *     nos headers quando o REMOTE_ADDR e um desses. E a forma recomendada.
+	 *   - true: confia em qualquer origem. Mantido por compatibilidade; so e
+	 *     seguro se a origem for inalcancavel sem passar pelo proxy.
+	 *
+	 * @param string $remote REMOTE_ADDR da conexao.
+	 * @return bool
+	 */
+	public static function proxy_is_trusted( $remote ) {
+		if ( ! defined( 'MMCB_TRUST_PROXY' ) || ! MMCB_TRUST_PROXY ) {
+			return false;
+		}
+
+		if ( is_string( MMCB_TRUST_PROXY ) || is_array( MMCB_TRUST_PROXY ) ) {
+			$list = is_array( MMCB_TRUST_PROXY ) ? MMCB_TRUST_PROXY : preg_split( '/[\s,]+/', (string) MMCB_TRUST_PROXY );
+			$list = array_filter( array_map( 'trim', (array) $list ) );
+			return '' !== $remote && in_array( $remote, $list, true );
+		}
+
+		return true;
 	}
 
 	/**

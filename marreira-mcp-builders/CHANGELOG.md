@@ -63,6 +63,17 @@ MCP/CLI e drivers de builder).
   independente do toggle — igual ao driver do Elementor, que já fazia assim, e
   igual ao que `inspect_elements()` já aplicava aos elementos não-`code`.
 
+- **Headers de proxy eram aceitos sem validar a origem nem o formato.** Com
+  `MMCB_TRUST_PROXY` ligada, `client_ip()` aceitava `CF-Connecting-IP` / `X-Real-IP` /
+  `X-Forwarded-For` de qualquer origem e **sem checar se o valor era sequer um IP**.
+  Quem alcançasse a origem direto (sem passar pelo Cloudflare/nginx) mandava
+  `X-Real-IP: <ip da allowlist>` e entrava, ou rotacionava IPs forjados e nunca
+  atingia o throttle; `X-Forwarded-Proto: https` furava o HTTPS-only com o token
+  trafegando em claro. Agora todo valor passa por `FILTER_VALIDATE_IP`, e
+  `MMCB_TRUST_PROXY` aceita uma **lista de IPs de proxy** — os headers só valem
+  quando o `REMOTE_ADDR` é um deles. O valor `true` mantém o comportamento antigo
+  (com a validação de formato), para não quebrar quem já usa.
+
 ### Corrigido
 
 - **`/cli/db/query` executava um SQL diferente do pedido, devolvendo dados errados
