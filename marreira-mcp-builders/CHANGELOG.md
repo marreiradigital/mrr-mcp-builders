@@ -48,6 +48,15 @@ lote — que é o que se lê para decidir se atualiza.
 
 ### Alterado
 
+- **Rebrand completo do painel: tema claro creme/terracota com modo escuro.** O
+  visual dark glass ciano/roxo deu lugar a um design system sereno no estilo
+  Claude × ChatGPT: fundo creme, acento terracota, títulos com serifa de sistema
+  (sem webfont/CDN), superfícies com bordas e sombras suaves. O claro é o padrão;
+  o escuro entra automaticamente com o sistema (`prefers-color-scheme`) e pode ser
+  forçado pelo toggle do painel (`data-mmcb-theme`). Todos os nomes de classe
+  foram preservados; entram componentes novos para o wizard guiado (termo,
+  cards de escolha de conexão, checklist, timeline, stepper com rótulos).
+
 - **SKILL (ambas as variantes): regra explícita de interface completa em um
   `run_batch`.** Montar/estilizar uma página inteira é o cenário clássico em que
   hosts/WAFs com rate-limit agressivo derrubam a 2ª/3ª requisição e a página fica
