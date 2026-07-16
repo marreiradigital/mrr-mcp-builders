@@ -150,6 +150,31 @@ instale este no lugar.
 
 Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
+== Aviso Legal ==
+
+O MarreiraMCP Builders é distribuído sob **GPL 2.0 ou posterior**, **sem garantia de
+qualquer espécie** — conforme as cláusulas 15 e 16 da GPL, o programa é fornecido "no
+estado em que se encontra", sem garantias implícitas de comercialização ou de adequação
+a uma finalidade específica.
+
+**Responsabilidade pelo uso:** este plugin é um servidor MCP estruturado — ele executa o
+que o modelo de IA conectado solicitar, dentro dos limites que você configurar. Ele não
+é um agente de IA e não toma decisões sozinho. Toda ação (criação, modificação e
+exclusão de conteúdo, ativação de plugins, escrita de arquivos, consultas ao banco) é
+determinada pelo modelo de IA e pelas abilities (escopos) que você habilitou. A escolha
+do modelo, dos escopos e dos poderes ativados é inteiramente sua, e os autores não se
+responsabilizam por danos decorrentes das ações do modelo de IA conectado.
+
+**Poderes perigosos vêm desligados de fábrica.** O CLI geral (execução de PHP, consultas
+diretas ao banco, escrita de arquivos) exige ativação explícita pelo administrador **e**
+a ability correspondente no token (trava dupla). Ao ativar esses recursos, você autoriza
+conscientemente operações potencialmente destrutivas.
+
+**Recomendação:** faça backup completo (banco e arquivos) antes de conectar qualquer
+agente de IA, habilite apenas as abilities estritamente necessárias e acompanhe o audit
+log no painel. O primeiro acesso ao painel exige o aceite do Termo de Responsabilidade,
+que fica registrado com usuário, data e versão do termo.
+
 == Changelog ==
 
 = 1.6.2 =

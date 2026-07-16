@@ -66,6 +66,11 @@ lote — que é o que se lê para decidir se atualiza.
   próprio `/describe` na auto-descoberta, e a ordem agora reflete o fluxo
   recomendado (skill → mcp → describe → cli).
 
+- **`readme.txt`: nova seção "Aviso Legal".** Versão resumida do Termo de
+  Responsabilidade para a página do plugin no WordPress.org — GPL sem garantia,
+  o plugin executa o que a IA manda, a responsabilidade pelo modelo/escopos é do
+  usuário, poderes perigosos desligados de fábrica e recomendação de backup.
+
 ### Alterado
 
 - **Rebrand completo do painel: tema claro creme/terracota com modo escuro.** O
