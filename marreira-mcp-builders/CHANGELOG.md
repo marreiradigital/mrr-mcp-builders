@@ -34,6 +34,18 @@ lote — que é o que se lê para decidir se atualiza.
   funcionando; o gate é só do painel. Nova action AJAX `mmcb_accept_terms` e bloco
   `terms` no payload de status. A desinstalação remove o registro.
 
+- **Wizard guiado ramificado — configuração "à prova de burro" do início ao fim.**
+  O wizard de 3 passos virou um assistente completo: aceite do Termo de
+  Responsabilidade (passo 0) → builder → tier de IA → **"como você vai
+  conectar?"** — e daí ramifica: **token manual** (Claude Code, Cursor, VS Code…)
+  com geração de token, URL da skill/endpoint copiáveis e um bloco de instruções
+  pronto para colar na IA; ou **conector OAuth** (Claude.ai / ChatGPT) com a URL
+  do MCP, a timeline do que vai acontecer na autorização e a aprovação de
+  clientes inline. Cada trilha termina em checklist + autoteste. Passos validam
+  antes de deixar avançar (não avança sem aceitar o termo, sem builder, sem
+  token gerado). Instalações existentes que atualizarem veem só a tela de aceite
+  uma única vez e caem direto no painel.
+
 - **Skill dinâmica: `GET /skill` sai com as URLs reais do site.** O documento era
   servido com o placeholder literal `SEU-SITE`, obrigando a IA a inferir o domínio
   (ou o usuário a ditar endpoint por endpoint). Agora o servidor substitui

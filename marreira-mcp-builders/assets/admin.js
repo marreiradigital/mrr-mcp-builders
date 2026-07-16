@@ -49,10 +49,13 @@
 		tab:          'painel',
 		flashToken:   null,  // plaintext exibido uma vez após geração
 		wizard: {
-			step:    1,
-			builder: '',
-			tier:    '',
-			token:   null,   // plaintext após step 3
+			step:         'terms', // terms | builder | tier | branch | token-* | oauth-*
+			branch:       '',      // 'token' | 'oauth'
+			builder:      '',
+			tier:         '',
+			token:        null,    // plaintext após geração no wizard
+			termsChecked: false,
+			guideMode:    false,   // true = aberto pelo botão "Rever guia"
 		},
 		logs: {
 			page:     1,
@@ -134,50 +137,186 @@
 	}
 
 	// =========================================================================
-	// WIZARD DE ONBOARDING
+	// WIZARD GUIADO (ramificado) + TERMO DE RESPONSABILIDADE
 	// =========================================================================
 
 	var KNOWN_ABILITIES = [ '*', 'builder', 'read', 'content', 'plugins', 'themes', 'core', 'files', 'snippets', 'db', 'db_query', 'exec', 'cli' ];
 
+	// O wizard está visível quando: o termo ainda não foi aceito, o onboarding
+	// não terminou, ou o usuário abriu o "Rever guia".
+	function wizardActive() {
+		var s = state.status;
+		if ( ! s ) { return false; }
+		var termsOk = s.terms && s.terms.accepted;
+		return ! termsOk || ! s.onboarding_done || state.wizard.guideMode;
+	}
+
+	// ---- Termo de Responsabilidade (texto jurídico) ----
+	function termsHtml() {
+		return '' +
+			'<h4>1. Natureza do software e isenção de garantia</h4>' +
+			'<p>O MarreiraMCP Builders é um software livre distribuído sob a Licença Pública Geral GNU, versão 2.0 ou posterior (GPL-2.0-or-later). Nos termos das cláusulas 15 e 16 da GPL, este programa é fornecido <strong>sem qualquer garantia</strong>, expressa ou implícita, incluindo, sem limitação, as garantias implícitas de comercialização e de adequação a uma finalidade específica. O risco integral quanto à qualidade e ao desempenho do programa é seu. Em nenhuma hipótese os autores ou detentores dos direitos autorais serão responsáveis por danos diretos, indiretos, incidentais, especiais ou consequentes decorrentes do uso ou da impossibilidade de uso deste software.</p>' +
+			'<h4>2. O que este plugin é — e o que ele não é</h4>' +
+			'<p>Este plugin é um <strong>servidor MCP (Model Context Protocol)</strong>: uma ponte estruturada que recebe comandos emitidos por um modelo de inteligência artificial externo e os executa neste WordPress, dentro dos limites que você configurar. O MarreiraMCP Builders <strong>não é um agente de IA</strong>: ele não toma decisões autônomas, não escolhe o que fazer no seu site e não controla o modelo conectado. Todo comando executado é determinado exclusivamente pelo modelo de IA que você escolheu conectar e pelas instruções que você (ou alguém autorizado por você) forneceu a ele.</p>' +
+			'<h4>3. Responsabilidade integral do usuário</h4>' +
+			'<p>A escolha do modelo de inteligência artificial, das permissões (abilities) habilitadas em cada token, dos poderes ativados nas configurações e das instruções dadas ao modelo é <strong>inteira e exclusivamente sua</strong>. Um modelo de IA com as permissões correspondentes pode <strong>criar, modificar e apagar conteúdo, páginas, configurações e dados deste site</strong>. Os autores deste plugin não controlam, não supervisionam e não se responsabilizam pelas ações do modelo de IA conectado, sejam quais forem sua natureza e extensão.</p>' +
+			'<h4>4. Poderes perigosos — trava dupla</h4>' +
+			'<p>O CLI geral de WordPress (execução de PHP, consultas diretas ao banco de dados, escrita de arquivos) vem <strong>desligado de fábrica</strong> e exige ativação explícita no painel <strong>e</strong> a ability correspondente no token. Ao ativar qualquer um desses recursos, você autoriza conscientemente que o modelo de IA execute operações potencialmente destrutivas e irreversíveis no servidor.</p>' +
+			'<h4>5. Recomendações de segurança</h4>' +
+			'<p>Antes de conectar qualquer agente de IA: (a) <strong>faça backup completo do site</strong> (banco de dados e arquivos), de preferência automatizado e guardado fora do servidor; (b) habilite apenas as abilities estritamente necessárias; (c) revise e revogue tokens que não estiverem em uso; (d) acompanhe o audit log no painel; (e) não ative execução de PHP, queries diretas ou escrita de arquivos sem plena compreensão das implicações.</p>' +
+			'<h4>6. Aceitação</h4>' +
+			'<p>Ao marcar a caixa e clicar em “Aceitar e continuar”, você declara ter lido, compreendido e concordado com este termo e com as condições da licença GPL que rege o software.</p>';
+	}
+
+	// ---- Bloco de instruções prontas para colar na IA ----
+	function aiInstructions( token ) {
+		var ep  = ( state.status && state.status.endpoints ) || {};
+		var tok = token || 'SEU_TOKEN';
+		return 'Você vai operar este site WordPress pelo servidor MCP "MarreiraMCP Builders".\n\n' +
+			'1) Leia a documentação do servidor (skill) — ela lista todos os endpoints já com o domínio real:\n' +
+			'   GET ' + ( ep.skill || '' ) + '\n\n' +
+			'2) Conecte-se ao servidor MCP:\n' +
+			'   URL: ' + ( ep.mcp || '' ) + '\n' +
+			'   Header: Authorization: Bearer ' + tok + '\n\n' +
+			'3) Configuração para Claude Code / Cursor / VS Code (mcpServers):\n' +
+			'{\n' +
+			'  "mcpServers": {\n' +
+			'    "wordpress": {\n' +
+			'      "type": "http",\n' +
+			'      "url": "' + ( ep.mcp || '' ) + '",\n' +
+			'      "headers": { "Authorization": "Bearer ' + tok + '" }\n' +
+			'    }\n' +
+			'  }\n' +
+			'}';
+	}
+
+	// ---- Sequência de passos (muda conforme o branch escolhido) ----
+	function wizardSequence() {
+		var w   = state.wizard;
+		var seq = [];
+		if ( ! w.guideMode ) {
+			seq.push( { id: 'terms', label: 'Termo' } );
+			seq.push( { id: 'builder', label: 'Builder' } );
+			seq.push( { id: 'tier', label: 'IA' } );
+		}
+		seq.push( { id: 'branch', label: 'Conexão' } );
+		if ( w.branch === 'oauth' ) {
+			seq.push( { id: 'oauth-url', label: 'URL' } );
+			seq.push( { id: 'oauth-consent', label: 'Autorizar' } );
+			seq.push( { id: 'oauth-approve', label: 'Aprovar' } );
+			seq.push( { id: 'oauth-done', label: 'Pronto' } );
+		} else if ( w.branch === 'token' ) {
+			seq.push( { id: 'token-gen', label: 'Token' } );
+			seq.push( { id: 'token-copy', label: 'Instruções' } );
+			seq.push( { id: 'token-done', label: 'Pronto' } );
+		} else {
+			seq.push( { id: 'wz-end', label: 'Pronto' } );
+		}
+		return seq;
+	}
+
+	var WZ_TITLES = {
+		'terms':         [ 'Termo de Responsabilidade', 'Leia e aceite para configurar o plugin.' ],
+		'builder':       [ 'Escolha o builder', 'Selecione o page builder instalado neste site.' ],
+		'tier':          [ 'Qual IA vai consumir o MCP?', 'Isso define como o servidor envia o contexto para a IA.' ],
+		'branch':        [ 'Como você vai conectar a IA?', 'Escolha um caminho agora — dá para usar os dois depois.' ],
+		'token-gen':     [ 'Gere o token de acesso', 'O token autentica o agente de IA. Você pode gerar mais depois.' ],
+		'token-copy':    [ 'Copie e cole na IA', 'Tudo pronto para colar no seu cliente de IA.' ],
+		'token-done':    [ 'Confira e conclua', 'Revise o checklist e rode o autoteste.' ],
+		'oauth-url':     [ 'Adicione o conector no app de IA', 'Claude.ai e ChatGPT se conectam por OAuth — automático.' ],
+		'oauth-consent': [ 'O que vai acontecer agora', 'O app abre uma tela de autorização aqui no seu site.' ],
+		'oauth-approve': [ 'Aprove o cliente', 'Cada app que se registra precisa da sua aprovação.' ],
+		'oauth-done':    [ 'Confira e conclua', 'Revise o checklist e rode o autoteste.' ],
+	};
+
 	function renderWizard() {
+		var s = state.status;
 		var w = state.wizard;
-		var stepDots = [ 1, 2, 3 ].map( function ( n ) {
-			var cls = n === w.step ? 'active' : ( n < w.step ? 'done' : '' );
-			return '<div class="mmcb-wizard-step-dot ' + cls + '">' + ( n < w.step ? '✓' : n ) + '</div>';
-		} ).join( '' );
 
-		var stepTitles = [ 'Escolha o builder', 'Qual IA vai consumir o MCP?', 'Gere seu primeiro token' ];
-		var stepSubs   = [
-			'Selecione o page builder instalado neste site.',
-			'Isso define como o servidor envia o contexto para a IA.',
-			'O token autentica o agente de IA. Você pode gerar mais depois.',
-		];
+		// Instalação existente sem aceite: só a tela do termo, sem stepper.
+		var termsOnly = s.terms && ! s.terms.accepted && s.onboarding_done && ! w.guideMode;
+		if ( termsOnly ) { w.step = 'terms'; }
 
-		var inner = '';
-		if ( w.step === 1 ) { inner = wizardStep1(); }
-		else if ( w.step === 2 ) { inner = wizardStep2(); }
-		else { inner = wizardStep3(); }
+		var seq    = wizardSequence();
+		var curIdx = -1;
+		seq.forEach( function ( st, i ) { if ( st.id === w.step ) { curIdx = i; } } );
+
+		var stepper = '';
+		if ( ! termsOnly ) {
+			stepper = '<div class="mmcb-wizard-steps">' + seq.map( function ( st, i ) {
+				var cls = i === curIdx ? 'active' : ( i < curIdx ? 'done' : '' );
+				return '<div class="mmcb-wizard-step ' + cls + '">' +
+					'<div class="mmcb-wizard-step-dot">' + ( i < curIdx ? '✓' : ( i + 1 ) ) + '</div>' +
+					'<div class="mmcb-wizard-step-label">' + esc( st.label ) + '</div>' +
+				'</div>';
+			} ).join( '' ) + '</div>';
+		}
+
+		var t     = WZ_TITLES[ w.step ] || [ '', '' ];
+		var inner = wizardStepHtml( w.step );
+
+		var headerSub = termsOnly
+			? 'O plugin foi atualizado e agora exige o aceite do termo abaixo para usar o painel.'
+			: ( w.guideMode
+				? 'Guia de conexão — siga os passos para ligar sua IA ao site.'
+				: 'Passo ' + ( curIdx + 1 ) + ' de ' + seq.length + ' — configuração guiada.' );
+
+		var topRow = '<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px">' +
+			( w.guideMode ? '<button class="mmcb-btn mmcb-btn-sm" data-wz-close="1">× Fechar guia</button>' : '' ) +
+			themeToggleBtn() +
+		'</div>';
 
 		root.innerHTML =
 			'<div class="mmcb-wizard">' +
+				topRow +
 				'<div class="mmcb-wizard-header">' +
 					'<div class="mmcb-logo" aria-hidden="true" style="margin:0 auto 16px;"><span></span><span></span><span></span><span></span></div>' +
-					'<h2>Configuração inicial — MarreiraMCP Builders</h2>' +
-					'<p>Passo ' + w.step + ' de 3 — ' + esc( stepSubs[ w.step - 1 ] ) + '</p>' +
+					'<h2>' + ( w.guideMode ? 'Guia de conexão' : 'MarreiraMCP Builders' ) + '</h2>' +
+					'<p>' + esc( headerSub ) + '</p>' +
 				'</div>' +
-				'<div class="mmcb-wizard-steps">' + stepDots + '</div>' +
+				stepper +
 				'<div class="mmcb-wizard-card">' +
-					'<h3>' + esc( stepTitles[ w.step - 1 ] ) + '</h3>' +
-					'<p class="mmcb-hint">' + esc( stepSubs[ w.step - 1 ] ) + '</p>' +
+					'<h3>' + esc( t[ 0 ] ) + '</h3>' +
+					'<p class="mmcb-hint">' + esc( t[ 1 ] ) + '</p>' +
 					inner +
 				'</div>' +
 			'</div>';
 	}
 
-	function wizardStep1() {
-		var s = state.status;
+	function wizardStepHtml( step ) {
+		if ( step === 'terms' )         { return wizardTerms(); }
+		if ( step === 'builder' )       { return wizardBuilder(); }
+		if ( step === 'tier' )          { return wizardTier(); }
+		if ( step === 'branch' )        { return wizardBranch(); }
+		if ( step === 'token-gen' )     { return wizardTokenGen(); }
+		if ( step === 'token-copy' )    { return wizardTokenCopy(); }
+		if ( step === 'token-done' )    { return wizardDone( 'token' ); }
+		if ( step === 'oauth-url' )     { return wizardOauthUrl(); }
+		if ( step === 'oauth-consent' ) { return wizardOauthConsent(); }
+		if ( step === 'oauth-approve' ) { return wizardOauthApprove(); }
+		if ( step === 'oauth-done' )    { return wizardDone( 'oauth' ); }
+		return '';
+	}
+
+	// ---- Passo 0: termo ----
+	function wizardTerms() {
+		var s       = state.status;
+		var checked = state.wizard.termsChecked;
+		return '<div class="mmcb-terms-box">' + termsHtml() + '</div>' +
+			'<label class="mmcb-terms-accept">' +
+				'<input type="checkbox" id="mmcb-wz-terms-check"' + ( checked ? ' checked' : '' ) + '> ' +
+				'<span>Li e aceito o Termo de Responsabilidade. Entendo que o plugin apenas executa o que o modelo de IA mandar e que a responsabilidade pelo modelo, pelas permissões e pelos poderes ativados é minha.</span>' +
+			'</label>' +
+			'<p class="mmcb-terms-meta">Versão do termo: ' + esc( ( s.terms && s.terms.required_version ) || '1' ) + '. O aceite fica registrado com usuário, data e IP.</p>' +
+			'<div class="mmcb-wizard-actions">' +
+				'<button class="mmcb-btn mmcb-btn-primary" id="mmcb-wz-accept" data-wz-accept-terms="1"' + ( checked ? '' : ' disabled' ) + '>Aceitar e continuar</button>' +
+			'</div>';
+	}
+
+	// ---- Passo: builder ----
+	function wizardBuilder() {
+		var s         = state.status;
 		var available = s.available_builders || [];
-		// Pré-selecionar: se nenhum selecionado ainda, use o primeiro disponível.
 		if ( ! state.wizard.builder ) {
 			state.wizard.builder = available.length ? available[ 0 ] : ( s.builders && s.builders.length ? s.builders[ 0 ].slug : '' );
 		}
@@ -194,14 +333,14 @@
 
 		return '<div class="mmcb-builder-cards">' + cards + '</div>' +
 			'<div class="mmcb-wizard-actions">' +
-				'<button class="mmcb-btn mmcb-btn-primary" data-wz-next="2"' + ( state.wizard.builder ? '' : ' disabled' ) + '>Próximo →</button>' +
+				'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="tier"' + ( state.wizard.builder ? '' : ' disabled' ) + '>Próximo →</button>' +
 			'</div>';
 	}
 
-	function wizardStep2() {
-		var tier = state.wizard.tier || 'premium';
+	// ---- Passo: tier de IA ----
+	function wizardTier() {
 		if ( ! state.wizard.tier ) { state.wizard.tier = 'premium'; }
-
+		var tier  = state.wizard.tier;
 		var tiers = [
 			{
 				slug: 'premium',
@@ -225,13 +364,39 @@
 
 		return '<div class="mmcb-tier-cards">' + cards + '</div>' +
 			'<div class="mmcb-wizard-actions">' +
-				'<button class="mmcb-btn" data-wz-back="1">← Voltar</button>' +
-				'<button class="mmcb-btn mmcb-btn-primary" data-wz-next="3">Próximo →</button>' +
+				'<button class="mmcb-btn" data-wz-go="builder">← Voltar</button>' +
+				'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="branch">Próximo →</button>' +
 			'</div>';
 	}
 
-	function wizardStep3() {
-		var w = state.wizard;
+	// ---- Passo: escolha do modo de conexão ----
+	function wizardBranch() {
+		var w     = state.wizard;
+		var cards =
+			'<div class="mmcb-choice-cards">' +
+				'<div class="mmcb-choice-card' + ( w.branch === 'token' ? ' selected' : '' ) + '" data-wz-branch="token">' +
+					'<div class="mmcb-choice-icon">🔑</div>' +
+					'<h3>Token manual</h3>' +
+					'<p>Para Claude Code, Cursor, VS Code, Zed, n8n e afins. Você gera um token e cola a URL do MCP no cliente de IA.</p>' +
+				'</div>' +
+				'<div class="mmcb-choice-card' + ( w.branch === 'oauth' ? ' selected' : '' ) + '" data-wz-branch="oauth">' +
+					'<div class="mmcb-choice-icon">🔗</div>' +
+					'<h3>Conector OAuth</h3>' +
+					'<p>Para Claude.ai e ChatGPT. A IA abre uma tela de autorização aqui no seu site — sem copiar token.</p>' +
+				'</div>' +
+			'</div>';
+		var nextTarget = w.branch === 'oauth' ? 'oauth-url' : 'token-gen';
+		var back       = w.guideMode ? '' : '<button class="mmcb-btn" data-wz-go="tier">← Voltar</button>';
+		return cards +
+			'<div class="mmcb-wizard-actions">' +
+				back +
+				'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="' + nextTarget + '"' + ( w.branch ? '' : ' disabled' ) + '>Próximo →</button>' +
+			'</div>';
+	}
+
+	// ---- Branch token: gerar ----
+	function wizardTokenGen() {
+		var w          = state.wizard;
 		var tokenFlash = '';
 		if ( w.token ) {
 			tokenFlash =
@@ -250,30 +415,163 @@
 			'</label>';
 		} ).join( '' );
 
+		var skip = ( w.guideMode && ! w.token )
+			? '<button class="mmcb-btn" data-wz-go="token-copy">Já tenho um token →</button>'
+			: '';
+
 		return tokenFlash +
 			'<div class="mmcb-field"><label for="mmcb-wz-tname">Nome do token</label>' +
-				'<input type="text" id="mmcb-wz-tname" value="Agente IA" placeholder="Ex.: Claude Desktop">' +
+				'<input type="text" id="mmcb-wz-tname" value="Agente IA" placeholder="Ex.: Claude Code">' +
 			'</div>' +
 			'<div class="mmcb-field"><label>Permissões (abilities)</label>' +
 				'<div class="mmcb-abilities-grid">' + abilityBoxes + '</div>' +
+				'<p class="description">Para editar páginas basta “builder”. Só marque poderes extras se a tarefa exigir.</p>' +
 			'</div>' +
 			'<div class="mmcb-field"><label for="mmcb-wz-exp">Validade (dias, 0 = nunca expira)</label>' +
 				'<input type="number" id="mmcb-wz-exp" min="0" value="0">' +
 			'</div>' +
 			'<div class="mmcb-wizard-actions">' +
-				'<button class="mmcb-btn" data-wz-back="2">← Voltar</button>' +
-				'<button class="mmcb-btn" id="mmcb-wz-gen">Gerar token</button>' +
-				'<button class="mmcb-btn mmcb-btn-primary" id="mmcb-wz-finish">Concluir configuração</button>' +
+				'<button class="mmcb-btn" data-wz-go="branch">← Voltar</button>' +
+				'<button class="mmcb-btn' + ( w.token ? '' : ' mmcb-btn-primary' ) + '" id="mmcb-wz-gen">' + ( w.token ? 'Gerar outro token' : 'Gerar token' ) + '</button>' +
+				skip +
+				'<button class="mmcb-btn' + ( w.token ? ' mmcb-btn-primary' : '' ) + '" data-wz-go="token-copy"' + ( w.token ? '' : ' disabled' ) + '>Próximo →</button>' +
 			'</div>';
+	}
+
+	// ---- Branch token: copiar skill + endpoint + instruções ----
+	function wizardTokenCopy() {
+		var ep = ( state.status && state.status.endpoints ) || {};
+		var w  = state.wizard;
+		return '' +
+			'<div class="mmcb-field"><label>1 · URL da skill — a documentação que a IA lê primeiro</label>' +
+				'<div class="mmcb-copy-row"><code class="mmcb-code" id="mmcb-wz-skill">' + esc( ep.skill || '' ) + '</code>' +
+				'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#mmcb-wz-skill">Copiar</button></div>' +
+				'<p class="description">Ela já lista todos os endpoints com o domínio real do site — além dela, a IA só precisa do token.</p>' +
+			'</div>' +
+			'<div class="mmcb-field"><label>2 · Endpoint MCP</label>' +
+				'<div class="mmcb-copy-row"><code class="mmcb-code" id="mmcb-wz-mcp">' + esc( ep.mcp || '' ) + '</code>' +
+				'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#mmcb-wz-mcp">Copiar</button></div>' +
+			'</div>' +
+			'<div class="mmcb-field"><label>3 · Instruções prontas — cole na sua IA</label>' +
+				'<pre class="mmcb-instructions-block" id="mmcb-wz-instr">' + esc( aiInstructions( w.token ) ) + '</pre>' +
+				'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#mmcb-wz-instr">Copiar instruções completas</button>' +
+				( w.token ? '' : '<p class="description">Sem token gerado nesta sessão, as instruções saem com o marcador SEU_TOKEN — troque pelo token real.</p>' ) +
+			'</div>' +
+			'<div class="mmcb-wizard-actions">' +
+				'<button class="mmcb-btn" data-wz-go="token-gen">← Voltar</button>' +
+				'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="token-done">Próximo →</button>' +
+			'</div>';
+	}
+
+	// ---- Branch OAuth: URL do conector ----
+	function wizardOauthUrl() {
+		var s        = state.status;
+		var mcp      = ( s.endpoints && s.endpoints.mcp ) || '';
+		var oauthOff = ! ( s.oauth && s.oauth.enabled )
+			? '<p class="mmcb-flash-warn">⚠ O conector OAuth está desligado nas configurações. Ligue-o na aba Conectores antes de seguir, senão o app não consegue se registrar.</p>'
+			: '';
+		return oauthOff +
+			'<div class="mmcb-field"><label>URL do servidor MCP — cole no app de IA</label>' +
+				'<div class="mmcb-copy-row"><code class="mmcb-code" id="mmcb-wz-omcp">' + esc( mcp ) + '</code>' +
+				'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#mmcb-wz-omcp">Copiar</button></div>' +
+			'</div>' +
+			'<ul class="mmcb-timeline">' +
+				'<li><strong>No Claude.ai</strong>Configurações → Conectores → “Adicionar conector personalizado” → cole a URL acima.</li>' +
+				'<li><strong>No ChatGPT</strong>Configurações → Conectores / “Apps e conectores” → adicionar servidor MCP → cole a URL acima.</li>' +
+			'</ul>' +
+			'<div class="mmcb-wizard-actions">' +
+				'<button class="mmcb-btn" data-wz-go="branch">← Voltar</button>' +
+				'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="oauth-consent">Já colei, próximo →</button>' +
+			'</div>';
+	}
+
+	// ---- Branch OAuth: o que esperar da autorização ----
+	function wizardOauthConsent() {
+		return '<ul class="mmcb-timeline">' +
+			'<li><strong>O app se registra sozinho</strong>Ao salvar o conector, o Claude.ai/ChatGPT descobre o OAuth deste site e se registra automaticamente.</li>' +
+			'<li><strong>Uma tela de autorização abre aqui no seu site</strong>Você precisa estar logado como administrador. A tela mostra o nome do app e os escopos pedidos.</li>' +
+			'<li><strong>Você clica em “Autorizar”</strong>Conceda apenas os escopos que quiser — os sensíveis ficam bloqueados pela trava dupla das configurações.</li>' +
+			'<li><strong>O app volta a funcionar sozinho</strong>Ele recebe o token e passa a chamar as ferramentas do site. O cliente aparece na aba Conectores.</li>' +
+		'</ul>' +
+		'<p class="mmcb-hint">Mantenha esta aba aberta durante o processo. Se o app ficar “pendente de aprovação”, o próximo passo resolve.</p>' +
+		'<div class="mmcb-wizard-actions">' +
+			'<button class="mmcb-btn" data-wz-go="oauth-url">← Voltar</button>' +
+			'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="oauth-approve">Entendi, próximo →</button>' +
+		'</div>';
+	}
+
+	// ---- Branch OAuth: aprovar clientes ----
+	function wizardOauthApprove() {
+		var clients = state.status._clients;
+		var list;
+		if ( clients === undefined ) {
+			list = '<p class="mmcb-hint">Carregando clientes…</p>';
+		} else if ( ! clients.length ) {
+			list = '<p class="mmcb-hint">Nenhum cliente apareceu ainda. Termine de adicionar o conector no app de IA e clique em “Atualizar lista”.</p>';
+		} else {
+			list = '<ul class="mmcb-checklist">' + clients.map( function ( c ) {
+				var pend = c.status === 'pending';
+				return '<li class="' + ( pend ? 'pending' : '' ) + '">' +
+					'<span style="flex:1 1 auto"><strong>' + esc( c.client_name || c.client_id ) + '</strong> — ' +
+					( c.status === 'approved' ? 'aprovado' : ( pend ? 'pendente de aprovação' : esc( c.status ) ) ) + '</span>' +
+					( pend ? '<button class="mmcb-btn mmcb-btn-sm mmcb-btn-primary" data-wz-approve-client="' + esc( c.id ) + '">Aprovar</button>' : '' ) +
+				'</li>';
+			} ).join( '' ) + '</ul>';
+		}
+		return list +
+			'<div class="mmcb-actions" style="margin-top:12px"><button class="mmcb-btn mmcb-btn-sm" data-wz-clients-refresh="1">↻ Atualizar lista</button></div>' +
+			'<p class="mmcb-hint" style="margin-top:12px">Aprovar o registro não concede acesso sozinho — o acesso só nasce quando você autoriza os escopos na tela de consentimento.</p>' +
+			'<div class="mmcb-wizard-actions">' +
+				'<button class="mmcb-btn" data-wz-go="oauth-consent">← Voltar</button>' +
+				'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="oauth-done">Próximo →</button>' +
+			'</div>';
+	}
+
+	// ---- Checklist final + autoteste ----
+	function wizardDone( branch ) {
+		var s            = state.status;
+		var w            = state.wizard;
+		var items        = [];
+		var builderLabel = w.builder || s.active_builder || '—';
+		var tierLabel    = w.tier || s.ai_tier || '—';
+		items.push( '<li>Builder: <strong>' + esc( builderLabel ) + '</strong></li>' );
+		items.push( '<li>Tier de IA: <strong>' + esc( tierLabel ) + '</strong></li>' );
+		if ( branch === 'token' ) {
+			items.push( w.token ? '<li>Token gerado nesta sessão</li>' : '<li class="pending">Token — gere um na aba Tokens se ainda não tiver</li>' );
+			items.push( '<li>URL da skill e endpoint MCP prontos (sempre disponíveis no Painel)</li>' );
+		} else {
+			items.push( '<li class="pending">Conector adicionado no app de IA (confira lá se conectou)</li>' );
+			items.push( '<li>Clientes aprovados aparecem na aba Conectores</li>' );
+		}
+		var finishLabel = w.guideMode ? 'Fechar guia' : 'Concluir configuração';
+		return '<ul class="mmcb-checklist">' + items.join( '' ) + '</ul>' +
+			'<div class="mmcb-actions"><button class="mmcb-btn" data-wz-selftest="1">Executar autoteste</button></div>' +
+			'<div id="mmcb-wz-selftest"></div>' +
+			'<div class="mmcb-wizard-actions">' +
+				'<button class="mmcb-btn" data-wz-go="' + ( branch === 'token' ? 'token-copy' : 'oauth-approve' ) + '">← Voltar</button>' +
+				'<button class="mmcb-btn mmcb-btn-primary" id="mmcb-wz-finish">' + finishLabel + '</button>' +
+			'</div>';
+	}
+
+	// Carrega a lista de clients OAuth para o passo de aprovação do wizard.
+	function wizardLoadClients() {
+		post( 'mmcb_list_oauth_clients' ).then( function ( res ) {
+			if ( res && res.success ) {
+				state.status._clients = res.data.clients || [];
+				if ( state.status.oauth ) { state.status.oauth.pending = res.data.pending || 0; }
+				if ( wizardActive() && state.wizard.step === 'oauth-approve' ) { renderWizard(); }
+			}
+		} );
 	}
 
 	function handleWizardClick( ev ) {
 		var target = ev.target;
+		var w      = state.wizard;
 
 		// Selecionar builder
 		var bCard = target.closest( '[data-wz-builder]' );
 		if ( bCard ) {
-			state.wizard.builder = bCard.getAttribute( 'data-wz-builder' );
+			w.builder = bCard.getAttribute( 'data-wz-builder' );
 			renderWizard();
 			return;
 		}
@@ -281,24 +579,26 @@
 		// Selecionar tier
 		var tCard = target.closest( '[data-wz-tier]' );
 		if ( tCard ) {
-			state.wizard.tier = tCard.getAttribute( 'data-wz-tier' );
+			w.tier = tCard.getAttribute( 'data-wz-tier' );
 			renderWizard();
 			return;
 		}
 
-		// Avançar passo
-		var nextBtn = target.closest( '[data-wz-next]' );
-		if ( nextBtn ) {
-			state.wizard.step = parseInt( nextBtn.getAttribute( 'data-wz-next' ), 10 );
+		// Selecionar modo de conexão
+		var brCard = target.closest( '[data-wz-branch]' );
+		if ( brCard ) {
+			w.branch = brCard.getAttribute( 'data-wz-branch' );
 			renderWizard();
 			return;
 		}
 
-		// Voltar passo
-		var backBtn = target.closest( '[data-wz-back]' );
-		if ( backBtn ) {
-			state.wizard.step = parseInt( backBtn.getAttribute( 'data-wz-back' ), 10 );
+		// Navegar entre passos
+		var goBtn = target.closest( '[data-wz-go]' );
+		if ( goBtn ) {
+			if ( goBtn.disabled ) { return; }
+			w.step = goBtn.getAttribute( 'data-wz-go' );
 			renderWizard();
+			if ( w.step === 'oauth-approve' && state.status._clients === undefined ) { wizardLoadClients(); }
 			return;
 		}
 
@@ -310,7 +610,38 @@
 			return;
 		}
 
-		// Gerar token (step 3)
+		// Fechar guia (modo "Rever guia")
+		if ( target.closest( '[data-wz-close]' ) ) {
+			w.guideMode = false;
+			render();
+			return;
+		}
+
+		// Aceitar o Termo de Responsabilidade
+		var acceptBtn = target.closest( '[data-wz-accept-terms]' );
+		if ( acceptBtn ) {
+			if ( ! w.termsChecked ) { toast( 'Marque a caixa de aceite primeiro.', 'err' ); return; }
+			acceptBtn.disabled = true;
+			var version = ( state.status.terms && state.status.terms.required_version ) || '1';
+			post( 'mmcb_accept_terms', { terms_version: version } ).then( function ( res ) {
+				acceptBtn.disabled = false;
+				if ( res && res.success ) {
+					state.status = res.data;
+					toast( 'Termo aceito. Registro gravado.', 'ok' );
+					if ( state.status.onboarding_done ) {
+						render(); // instalação existente: direto para o painel
+					} else {
+						w.step = 'builder';
+						renderWizard();
+					}
+				} else {
+					toast( ( res && res.data && res.data.message ) || 'Falha ao registrar o aceite.', 'err' );
+				}
+			} ).catch( function () { acceptBtn.disabled = false; toast( 'Erro de rede.', 'err' ); } );
+			return;
+		}
+
+		// Gerar token (branch token)
 		if ( target.id === 'mmcb-wz-gen' ) {
 			var nameEl = document.getElementById( 'mmcb-wz-tname' );
 			var expEl  = document.getElementById( 'mmcb-wz-exp' );
@@ -324,9 +655,10 @@
 			} ).then( function ( res ) {
 				target.disabled = false;
 				if ( res && res.success ) {
-					state.wizard.token = res.data.token;
+					w.token = res.data.token;
+					// Preserva o bloco terms/estado: o payload de status vem completo.
 					state.status = res.data.status;
-					toast( 'Token gerado. Copie antes de concluir!', 'ok' );
+					toast( 'Token gerado. Copie antes de seguir!', 'ok' );
 					renderWizard();
 				} else {
 					toast( 'Falha ao gerar token.', 'err' );
@@ -335,14 +667,62 @@
 			return;
 		}
 
-		// Concluir onboarding
+		// Aprovar client OAuth (passo de aprovação)
+		var apBtn = target.closest( '[data-wz-approve-client]' );
+		if ( apBtn ) {
+			apBtn.disabled = true;
+			post( 'mmcb_approve_oauth_client', { id: apBtn.getAttribute( 'data-wz-approve-client' ) } ).then( function ( res ) {
+				if ( res && res.success ) {
+					state.status._clients = res.data.clients || [];
+					if ( state.status.oauth ) { state.status.oauth.pending = res.data.pending || 0; }
+					toast( 'Cliente aprovado.', 'ok' );
+					renderWizard();
+				} else {
+					apBtn.disabled = false;
+					toast( 'Falha ao aprovar.', 'err' );
+				}
+			} ).catch( function () { apBtn.disabled = false; toast( 'Erro de rede.', 'err' ); } );
+			return;
+		}
+
+		// Atualizar lista de clients
+		if ( target.closest( '[data-wz-clients-refresh]' ) ) {
+			wizardLoadClients();
+			return;
+		}
+
+		// Autoteste no wizard
+		var stBtn = target.closest( '[data-wz-selftest]' );
+		if ( stBtn ) {
+			stBtn.disabled = true;
+			post( 'mmcb_selftest' ).then( function ( res ) {
+				stBtn.disabled = false;
+				var box = document.getElementById( 'mmcb-wz-selftest' );
+				if ( res && res.success && res.data.ok ) {
+					if ( box ) { box.innerHTML = '<code class="mmcb-code is-token" style="margin-top:12px">✔ OK — o servidor respondeu. Sua configuração está funcionando.</code>'; }
+					toast( 'Autoteste OK.', 'ok' );
+				} else {
+					var msg = ( res && res.data && res.data.message ) || 'Falha no autoteste.';
+					if ( box ) { box.innerHTML = '<code class="mmcb-code" style="margin-top:12px">✗ ' + esc( msg ) + '</code>'; }
+					toast( msg, 'err' );
+				}
+			} ).catch( function () { stBtn.disabled = false; toast( 'Erro de rede.', 'err' ); } );
+			return;
+		}
+
+		// Concluir configuração / fechar guia
 		if ( target.id === 'mmcb-wz-finish' ) {
-			if ( ! state.wizard.builder || ! state.wizard.tier ) {
+			if ( w.guideMode ) {
+				w.guideMode = false;
+				render();
+				return;
+			}
+			if ( ! w.builder || ! w.tier ) {
 				toast( 'Selecione builder e tier antes de concluir.', 'err' );
 				return;
 			}
 			target.disabled = true;
-			post( 'mmcb_complete_onboarding', { builder: state.wizard.builder, tier: state.wizard.tier } )
+			post( 'mmcb_complete_onboarding', { builder: w.builder, tier: w.tier } )
 				.then( function ( res ) {
 					target.disabled = false;
 					if ( res && res.success ) {
@@ -815,7 +1195,8 @@
 
 	function render( logsData ) {
 		var s = state.status;
-		if ( ! s || ! s.onboarding_done ) {
+		if ( ! s ) { return; }
+		if ( wizardActive() ) {
 			renderWizard();
 			return;
 		}
@@ -893,7 +1274,8 @@
 		}
 
 		// Wizard — passa primeiro
-		if ( ! state.status || ! state.status.onboarding_done ) {
+		if ( ! state.status ) { return; }
+		if ( wizardActive() ) {
 			handleWizardClick( ev );
 			return;
 		}
@@ -1118,7 +1500,25 @@
 
 	// Toggles (checkboxes)
 	root.addEventListener( 'change', function ( ev ) {
-		if ( ! state.status || ! state.status.onboarding_done ) { return; }
+		if ( ! state.status ) { return; }
+
+		if ( wizardActive() ) {
+			// Checkbox de aceite do termo: habilita o botão sem re-renderizar
+			// (re-render perderia a posição de scroll do texto do termo).
+			if ( ev.target.id === 'mmcb-wz-terms-check' ) {
+				state.wizard.termsChecked = ev.target.checked;
+				var acceptBtn = document.getElementById( 'mmcb-wz-accept' );
+				if ( acceptBtn ) { acceptBtn.disabled = ! ev.target.checked; }
+				return;
+			}
+			// Classe checked nas abilities do wizard
+			var wzAb = ev.target.closest( '.mmcb-ability-check input[type="checkbox"]' );
+			if ( wzAb ) {
+				var wzLbl = ev.target.closest( '.mmcb-ability-check' );
+				if ( wzLbl ) { wzLbl.classList.toggle( 'checked', ev.target.checked ); }
+			}
+			return;
+		}
 
 		// Atualizar classe checked nas ability-check labels
 		var abCb = ev.target.closest( '.mmcb-ability-check input[type="checkbox"]' );
@@ -1141,15 +1541,7 @@
 
 	// Filtro de ferramentas
 	root.addEventListener( 'input', function ( ev ) {
-		if ( ! state.status || ! state.status.onboarding_done ) {
-			// Atualizar checked na classe da label do wizard
-			var wzCb = ev.target.closest( '.mmcb-ability-check' );
-			if ( wzCb ) {
-				var cb2 = wzCb.querySelector( 'input[type="checkbox"]' );
-				if ( cb2 ) { wzCb.classList.toggle( 'checked', cb2.checked ); }
-			}
-			return;
-		}
+		if ( ! state.status || wizardActive() ) { return; }
 		if ( ev.target.id === 'mmcb-search' ) {
 			var q = ev.target.value.toLowerCase();
 			document.querySelectorAll( '#mmcb-tool-list .mmcb-tool' ).forEach( function ( el ) {
@@ -1167,11 +1559,13 @@
 	post( 'mmcb_status' ).then( function ( res ) {
 		if ( res && res.success ) {
 			state.status = res.data;
-			// Pré-selecionar builder para o wizard
+			// Pré-selecionar builder/tier e o passo inicial do wizard
+			var termsOk = state.status.terms && state.status.terms.accepted;
 			if ( ! state.status.onboarding_done ) {
 				var avail = state.status.available_builders || [];
 				state.wizard.builder = avail.length ? avail[ 0 ] : ( state.status.builders && state.status.builders.length ? state.status.builders[ 0 ].slug : '' );
 				state.wizard.tier    = 'premium';
+				state.wizard.step    = termsOk ? 'builder' : 'terms';
 			}
 			render();
 		} else {
