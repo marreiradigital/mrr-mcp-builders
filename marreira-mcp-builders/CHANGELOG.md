@@ -21,6 +21,17 @@ lote — que é o que se lê para decidir se atualiza.
 
 ### Adicionado
 
+- **CRUD de `wp_options` no CLI (nova ability `options`).** A maior lacuna para
+  controlar plugins de terceiros: eles guardam a configuração em `wp_options`
+  (`woocommerce_*`, Yoast, WPForms…) e, até aqui, o CLI só lia isso via SELECT ou
+  escrevia via `exec/php`. Agora há rotas `/cli/options` (ler um/vários/buscar,
+  escrever, remover) e as tools `wp_get_option`, `wp_list_options`,
+  `wp_update_option`, `wp_delete_option`. Gateadas pela nova ability `options` +
+  master switch (`enable_general_cli`) — a mesma trava dupla. A leitura redige
+  options com nome sensível (chaves/senhas/segredos) e a escrita/remoção tem
+  self-protection nas options do próprio plugin (settings, aceite do termo,
+  versão), para a IA não desligar a própria segurança.
+
 - **O CLI geral agora aparece como tools MCP.** Até aqui o CLI existia só como
   rotas REST `/cli/*` — invisível para conectores puros (Claude.ai, ChatGPT), que
   só chamam o que está em `tools/list` e não fazem HTTP arbitrário. Com o CLI

@@ -105,11 +105,13 @@ class CLI_Tools {
 	private static function schema( array $props, array $required = array() ) {
 		$properties = array();
 		foreach ( $props as $key => $spec ) {
-			$parts                = array_pad( explode( ':', (string) $spec, 2 ), 2, '' );
-			$properties[ $key ]   = array(
-				'type'        => $parts[0],
-				'description' => $parts[1],
-			);
+			$parts = array_pad( explode( ':', (string) $spec, 2 ), 2, '' );
+			// Tipo vazio => propriedade sem "type" (aceita qualquer tipo JSON).
+			$prop = array( 'description' => $parts[1] );
+			if ( '' !== $parts[0] ) {
+				$prop['type'] = $parts[0];
+			}
+			$properties[ $key ] = $prop;
 		}
 		$schema = array(
 			'type'       => 'object',
@@ -294,6 +296,28 @@ class CLI_Tools {
 				'name' => 'wp_get_logs', 'cb' => 'list_logs', 'http' => 'GET', 'ability' => 'read',
 				'description' => 'Retorna o audit log paginado das requisicoes ao plugin.',
 				'props' => array( 'per_page' => 'integer:Itens.', 'page' => 'integer:Pagina.' ),
+			),
+
+			/* ---------------- Options (ability: options) ---------------- */
+			array(
+				'name' => 'wp_get_option', 'cb' => 'option_read', 'http' => 'GET', 'ability' => 'options',
+				'description' => 'Le o valor de uma option (config de plugin/site). Ex.: name=woocommerce_currency. Segredos (chaves/senhas) sao redigidos.',
+				'props' => array( 'name' => 'string:Nome da option.' ), 'required' => array( 'name' ),
+			),
+			array(
+				'name' => 'wp_list_options', 'cb' => 'option_read', 'http' => 'GET', 'ability' => 'options',
+				'description' => 'Busca options por trecho do nome (ex.: search=woocommerce) para descobrir as chaves de configuracao de um plugin.',
+				'props' => array( 'search' => 'string:Trecho do nome da option.', 'limit' => 'integer:Maximo de resultados (1..500, padrao 100).' ),
+			),
+			array(
+				'name' => 'wp_update_option', 'cb' => 'option_write', 'http' => 'POST', 'ability' => 'options',
+				'description' => 'Cria ou atualiza uma option. Configura plugins de terceiros. Options do proprio MarreiraMCP sao protegidas.',
+				'props' => array( 'name' => 'string:Nome da option.', 'value' => ':Valor (qualquer tipo JSON: string, numero, booleano, objeto ou array).', 'autoload' => 'boolean:Autoload (padrao: decisao do WP).' ), 'required' => array( 'name', 'value' ),
+			),
+			array(
+				'name' => 'wp_delete_option', 'cb' => 'option_delete', 'http' => 'DELETE', 'ability' => 'options',
+				'description' => 'Remove uma option. Options do proprio MarreiraMCP sao protegidas.',
+				'props' => array( 'name' => 'string:Nome da option.' ), 'required' => array( 'name' ),
 			),
 
 			/* ---------------- DB Explorer (ability: db) ---------------- */

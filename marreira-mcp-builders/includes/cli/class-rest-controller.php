@@ -434,6 +434,29 @@ class Rest_Controller {
 			'permission_callback' => Rest_Guard::ability_gate( 'db_query' ),
 			'show_in_index'       => false,
 		) );
+
+		/* ---------- Options (config de plugins e do site) ---------- */
+
+		register_rest_route( $ns, '/cli/options', array(
+			array(
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( __CLASS__, 'option_read' ),
+				'permission_callback' => Rest_Guard::ability_gate( 'options' ),
+				'show_in_index'       => false,
+			),
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( __CLASS__, 'option_write' ),
+				'permission_callback' => Rest_Guard::ability_gate( 'options' ),
+				'show_in_index'       => false,
+			),
+			array(
+				'methods'             => \WP_REST_Server::DELETABLE,
+				'callback'            => array( __CLASS__, 'option_delete' ),
+				'permission_callback' => Rest_Guard::ability_gate( 'options' ),
+				'show_in_index'       => false,
+			),
+		) );
 	}
 
 	/* ------------------------------------------------------------------ */
@@ -1699,6 +1722,82 @@ class Rest_Controller {
 		}
 		// safe_query checa allow_db_query e retorna WP_Error 403 se desabilitado.
 		$res = DB_Explorer::safe_query( $sql, $args );
+		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
+	}
+
+	/* ------------------------------------------------------------------ */
+	/*  Options (config de plugins e do site) — ability `options`          */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * GET /cli/options — le uma option (name), varias (names) ou busca (search).
+	 *
+	 * @param \WP_REST_Request $r Requisicao.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function option_read( \WP_REST_Request $r ) {
+		$check = self::require_cli_enabled();
+		if ( is_wp_error( $check ) ) { return $check; }
+
+		$name  = $r->get_param( 'name' );
+		$names = $r->get_param( 'names' );
+
+		if ( is_string( $name ) && '' !== $name ) {
+			$res = Options_Manager::get( $name );
+			return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
+		}
+
+		if ( ! empty( $names ) ) {
+			if ( is_string( $names ) ) {
+				$names = array_filter( array_map( 'trim', explode( ',', $names ) ) );
+			}
+			return rest_ensure_response( Options_Manager::get_many( (array) $names ) );
+		}
+
+		$search = (string) ( $r->get_param( 'search' ) ?? '' );
+		$limit  = (int) ( $r->get_param( 'limit' ) ?: 100 );
+		return rest_ensure_response( Options_Manager::search( $search, $limit ) );
+	}
+
+	/**
+	 * POST /cli/options — cria/atualiza uma option (name, value, autoload).
+	 *
+	 * @param \WP_REST_Request $r Requisicao.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function option_write( \WP_REST_Request $r ) {
+		$check = self::require_cli_enabled();
+		if ( is_wp_error( $check ) ) { return $check; }
+
+		$body = $r->get_json_params() ?: $r->get_params();
+		$name = isset( $body['name'] ) ? (string) $body['name'] : '';
+		if ( '' === trim( $name ) ) {
+			return new \WP_Error( 'mmcb_bad_request', 'Parametro "name" e obrigatorio.', array( 'status' => 400 ) );
+		}
+		if ( ! array_key_exists( 'value', $body ) ) {
+			return new \WP_Error( 'mmcb_bad_request', 'Parametro "value" e obrigatorio.', array( 'status' => 400 ) );
+		}
+		$autoload = array_key_exists( 'autoload', $body ) ? (bool) $body['autoload'] : null;
+
+		$res = Options_Manager::update( $name, $body['value'], $autoload );
+		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
+	}
+
+	/**
+	 * DELETE /cli/options — remove uma option (name).
+	 *
+	 * @param \WP_REST_Request $r Requisicao.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function option_delete( \WP_REST_Request $r ) {
+		$check = self::require_cli_enabled();
+		if ( is_wp_error( $check ) ) { return $check; }
+
+		$name = (string) ( $r->get_param( 'name' ) ?? '' );
+		if ( '' === trim( $name ) ) {
+			return new \WP_Error( 'mmcb_bad_request', 'Parametro "name" e obrigatorio.', array( 'status' => 400 ) );
+		}
+		$res = Options_Manager::delete( $name );
 		return is_wp_error( $res ) ? $res : rest_ensure_response( $res );
 	}
 }

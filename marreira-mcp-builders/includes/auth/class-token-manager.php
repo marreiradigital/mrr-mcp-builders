@@ -42,7 +42,7 @@ class Token_Manager {
 	const KNOWN_ABILITIES = array(
 		'*', 'builder', 'read', 'content',
 		'plugins', 'themes', 'core', 'files', 'snippets',
-		'db', 'db_query', 'exec', 'cli',
+		'options', 'db', 'db_query', 'exec', 'cli',
 	);
 
 	/**
