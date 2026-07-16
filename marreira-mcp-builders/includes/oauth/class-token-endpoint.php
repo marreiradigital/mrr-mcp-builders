@@ -58,6 +58,15 @@ class Token_Endpoint {
 			return self::error( 'invalid_request', 'Parâmetros obrigatórios ausentes (code, client_id, redirect_uri, code_verifier).' );
 		}
 
+		// O client precisa estar aprovado AGORA, nao so quando o code foi emitido:
+		// entre o consentimento e a troca cabem ate 60s (TTL do code), tempo de
+		// sobra para o admin revogar o conector no painel e o token ser emitido
+		// mesmo assim.
+		$client = Client_Manager::find_by_client_id( $client_id );
+		if ( ! $client || 'approved' !== $client['status'] ) {
+			return self::error( 'invalid_client', 'Client OAuth revogado ou não aprovado.' );
+		}
+
 		// consume() valida client/redirect/expiracao E PKCE antes de marcar o
 		// code como usado (nao queima o code se o PKCE falhar).
 		$row = Code_Manager::consume( $code, $client_id, $redirect_uri, $code_verifier );

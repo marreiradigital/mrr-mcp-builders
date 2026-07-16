@@ -220,7 +220,13 @@ class Client_Manager {
 	}
 
 	/**
-	 * Revoga um client.
+	 * Revoga um client E os tokens OAuth que ele ja tinha em maos.
+	 *
+	 * Marcar o client como 'revoked' sozinho nao cortava acesso nenhum: o
+	 * Rest_Guard nunca consulta a tabela de clients, entao o access token seguia
+	 * valendo e o refresh seguia rotacionando por 30 dias renovaveis. Revogar os
+	 * tokens junto e o que faz o botao "Revogar" do painel significar o que
+	 * promete.
 	 *
 	 * @param int $id Id do client.
 	 * @return bool
@@ -228,8 +234,18 @@ class Client_Manager {
 	public static function revoke( $id ) {
 		global $wpdb;
 		$table = Activator::table_oauth_clients();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$client_id = $wpdb->get_var( $wpdb->prepare( "SELECT client_id FROM {$table} WHERE id = %d LIMIT 1", (int) $id ) );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return false !== $wpdb->update( $table, array( 'status' => 'revoked' ), array( 'id' => (int) $id ), array( '%s' ), array( '%d' ) );
+		$ok = false !== $wpdb->update( $table, array( 'status' => 'revoked' ), array( 'id' => (int) $id ), array( '%s' ), array( '%d' ) );
+
+		if ( $ok && $client_id ) {
+			Token_Manager::revoke_by_client( (string) $client_id );
+		}
+
+		return $ok;
 	}
 
 	/**

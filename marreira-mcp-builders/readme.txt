@@ -154,6 +154,14 @@ Sim. O plugin exige HTTPS por padrão para proteger o token em trânsito.
 
 = 1.5.0 =
 Lote de correções vindas de uma auditoria completa do plugin.
+* Segurança: revogar um conector no painel não cortava o acesso — o refresh token
+  continuava rotacionando indefinidamente (cada rotação renovava por mais 30 dias).
+  Revogar o conector agora revoga todos os tokens OAuth dele.
+* Segurança: a trava dupla sumia na rotação do refresh — desligar `allow_php_exec`
+  não tirava o escopo `exec` de uma conexão já existente. Agora toda rotação
+  refiltra pelas settings atuais.
+* Segurança: a rotação passa a revalidar que o dono do token ainda é administrador.
+* Segurança: a troca de `code` por token agora confere se o client segue aprovado.
 * Correção grave: `/cli/db/query` executava um SQL diferente do pedido. As strings
   literais eram esvaziadas para análise e a versão esvaziada é que era executada —
   `WHERE post_status = 'publish'` virava `= ''`. Toda query com literal voltava

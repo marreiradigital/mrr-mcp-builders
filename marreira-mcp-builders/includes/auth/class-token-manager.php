@@ -8,6 +8,8 @@
 namespace Marreira\MCP_Builders\Auth;
 
 use Marreira\MCP_Builders\Activator;
+use Marreira\MCP_Builders\OAuth\Client_Manager;
+use Marreira\MCP_Builders\OAuth\Scopes;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -195,13 +197,62 @@ class Token_Manager {
 			return new \WP_Error( 'invalid_grant', __( 'Refresh token expirado.', 'marreira-mcp-builders' ) );
 		}
 
+		// O client precisa continuar aprovado. Sem esta checagem, revogar um
+		// conector no painel nao surtia efeito nenhum: o refresh continuava
+		// rotacionando e cada rotacao emitia um refresh novo de 30 dias, ou seja,
+		// acesso permanente apesar da revogacao.
+		$client = Client_Manager::find_by_client_id( (string) $client_id );
+		if ( ! $client || 'approved' !== $client['status'] ) {
+			return new \WP_Error( 'invalid_grant', __( 'Client OAuth revogado ou nao aprovado.', 'marreira-mcp-builders' ) );
+		}
+
+		// O dono precisa continuar admin (mesma regra do Rest_Guard). Sem isto o
+		// par novo era emitido normalmente para um dono ja despromovido, e o
+		// audit log registrava emissao bem-sucedida.
+		$owner = get_user_by( 'id', (int) $row['created_by'] );
+		if ( ! $owner instanceof \WP_User || ! user_can( $owner, 'manage_options' ) ) {
+			return new \WP_Error( 'invalid_grant', __( 'O dono do token perdeu privilegios de administracao.', 'marreira-mcp-builders' ) );
+		}
+
 		// Revoga o par antigo (rotacao) antes de emitir o novo.
 		self::revoke( (int) $row['id'] );
 
 		$abilities = json_decode( (string) $row['abilities'], true );
-		$abilities = is_array( $abilities ) ? $abilities : array( 'builder', 'read', 'content' );
+		$abilities = is_array( $abilities ) ? $abilities : array();
+
+		// Reaplica a trava dupla com as settings ATUAIS, em vez de copiar as
+		// abilities do token antigo. Antes, um conector que recebeu o escopo exec
+		// enquanto allow_php_exec estava ligado continuava renovando com exec
+		// depois de o admin desligar a flag — a trava dupla valia so na emissao
+		// inicial e sumia em toda rotacao seguinte.
+		$settings  = wp_parse_args( (array) get_option( Activator::SETTINGS_OPTION, array() ), Activator::default_settings() );
+		$abilities = Scopes::to_abilities( $abilities, $settings );
 
 		return self::generate_oauth( $abilities, (int) $row['created_by'], (string) $client_id );
+	}
+
+	/**
+	 * Revoga TODOS os tokens OAuth ativos de um client (access + refresh).
+	 *
+	 * Chamado quando o admin revoga o conector no painel. E o que faz a revogacao
+	 * ter efeito imediato: o Rest_Guard checa o status do token a cada requisicao,
+	 * entao marcar as linhas como revoked corta o access token na hora e, de
+	 * quebra, impede a rotacao (rotate_refresh exige status active).
+	 *
+	 * @param string $client_id Client OAuth.
+	 * @return int Quantidade de tokens revogados.
+	 */
+	public static function revoke_by_client( $client_id ) {
+		global $wpdb;
+		$table = Activator::table_tokens();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table} SET status = 'revoked' WHERE oauth_client_id = %s AND source = 'oauth' AND status = 'active'",
+				(string) $client_id
+			)
+		);
 	}
 
 	/**

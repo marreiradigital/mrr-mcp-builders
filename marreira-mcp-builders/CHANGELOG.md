@@ -32,6 +32,27 @@ seção `== Changelog ==` do `readme.txt`).
 Lote de correções vindas de uma auditoria completa do plugin (OAuth, autenticação,
 MCP/CLI e drivers de builder).
 
+### Segurança
+
+- **Revogar um conector no painel não cortava o acesso.** `Client_Manager::revoke()`
+  apenas marcava o client como `revoked`, mas o `Rest_Guard` nunca consulta a tabela
+  de clients e o `rotate_refresh()` também não. Resultado: o access token seguia
+  válido e o refresh token continuava rotacionando — e **cada rotação emitia um
+  refresh novo de 30 dias**, ou seja, acesso permanente apesar da revogação. Revogar
+  o conector agora revoga também todos os tokens OAuth dele
+  (`Token_Manager::revoke_by_client()`), e a rotação passa a exigir client aprovado.
+- **A trava dupla sumia na rotação do refresh token.** `rotate_refresh()` copiava as
+  abilities do token antigo sem reaplicar `Scopes::to_abilities()` com as settings
+  atuais. Um conector que ganhou o escopo `exec` enquanto `allow_php_exec` estava
+  ligado continuava renovando com `exec` depois de o admin desligar a flag — a trava
+  valia só na emissão inicial. Agora toda rotação refiltra pelas settings do momento.
+- **`rotate_refresh()` não revalidava o dono.** Um admin despromovido continuava
+  gerando pares novos (o `Rest_Guard` barrava no uso, mas o log registrava emissão
+  bem-sucedida). Agora exige `manage_options` do dono, como o resto do pipeline.
+- **Troca `code` → token não checava o status do client.** Entre o consentimento e a
+  troca cabem até 60s (TTL do code) — tempo de sobra para revogar o conector no
+  painel e o token ser emitido mesmo assim. O `/token` agora confere o client.
+
 ### Corrigido
 
 - **`/cli/db/query` executava um SQL diferente do pedido, devolvendo dados errados
