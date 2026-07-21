@@ -194,6 +194,7 @@
       <a href="#instalacao">Instalação & onboarding</a>
       <span class="eyebrow">Usando o MCP</span>
       <a href="#conexao">Conexão & endpoints</a>
+      <a href="#conector">Conector (Claude.ai/ChatGPT)</a>
       <a href="#tools">Tools</a>
       <a href="#batch">run_batch</a>
       <a href="#modo-ia">Modo de IA</a>
@@ -306,6 +307,28 @@ Authorization: Bearer mmcb_XXXX.XXXXXXXX
 Content-Type: application/json
 
 { "jsonrpc": "2.0", "id": 1, "method": "tools/list" }</pre></div>
+      </section>
+
+      <section id="conector">
+        <h2><span class="n">4b</span>Conector (Claude.ai / ChatGPT)</h2>
+        <p>No app de IA, adicione um <strong>conector (servidor MCP remoto)</strong> apontando para <code>/wp-json/marreira-mcp/v1/mcp</code>. O OAuth é automático: o app se registra, abre a tela de consentimento no seu WordPress (onde um administrador logado autoriza) e recebe o token. A aprovação acontece nessa tela — não é preciso pré-aprovar nada no painel.</p>
+
+        <h3>Não conecta? Quase sempre é o firewall / CDN — não o plugin</h3>
+        <p>Erros como <strong>“Não foi possível registrar no serviço de login”</strong> vêm de <strong>Cloudflare, WAF ou plugin de segurança</strong> bloqueando as requisições que o servidor da Anthropic/OpenAI faz ao seu site. O conector faz três chamadas <em>de servidor</em> (não de navegador) — <strong>registrar o app → pegar o token → usar as tools</strong> — com User-Agent de biblioteca (ex.: <code>python-httpx</code>). Bot Fight Mode e WAF costumam barrá-las <em>antes</em> de chegarem ao plugin, então a conexão falha mesmo com tudo certo aqui.</p>
+        <div class="callout warn"><span class="ci">!</span><p>Sintoma típico: no navegador as chamadas passam (registro <code>201</code>), mas com o User-Agent do provedor de IA o firewall devolve <code>520</code>/<code>403</code> e o pedido nem chega ao PHP. A conexão por <strong>token</strong> (Claude Code, curl) continua funcionando — porque não passa pelo mesmo bloqueio de bot.</p></div>
+
+        <h3>Libere estas rotas no firewall / CDN</h3>
+        <div class="code"><div class="bar"><span class="dot"></span>allowlist<button class="cp">copiar</button></div><pre>/wp-json/marreira-mcp/*
+/marreira-mcp-oauth/*
+/.well-known/oauth-*</pre></div>
+        <p><strong>No Cloudflare:</strong></p>
+        <ul class="muted" style="line-height:1.8">
+          <li><strong>Security → Bots:</strong> desligue o <strong>Bot Fight Mode</strong> (ou libere essas rotas no Super Bot Fight Mode).</li>
+          <li><strong>Security → WAF → Custom rules:</strong> uma regra com ação <strong>Skip</strong> (pular Managed Rules, Rate Limiting e Bot Fight) quando o <code>URI Path</code> contiver <code>/wp-json/marreira-mcp/</code>, <code>/marreira-mcp-oauth/</code> ou começar com <code>/.well-known/oauth</code>.</li>
+          <li><strong>Rate Limiting:</strong> isente essas rotas — o conector faz várias chamadas.</li>
+        </ul>
+        <p><strong>No host:</strong> se usar <strong>Wordfence, Imunify360, BitNinja ou mod_security</strong>, coloque as mesmas rotas na allowlist (um <code>520</code> costuma ser a origem derrubando a requisição).</p>
+        <div class="callout info"><span class="ci">i</span><p>Como confirmar: a aba <strong>Logs</strong> do painel registra as falhas de OAuth (<code>oauth:register_failed</code>, <code>oauth:authorize_failed</code>, <code>oauth:token_failed</code>). Se você tenta conectar e <em>nada</em> aparece lá, o pedido não chegou ao plugin — é o firewall/CDN. “Gerar um Client ID manual” não resolve sozinho: a troca de token e as chamadas das tools continuam vindo do servidor do provedor e batem no mesmo bloqueio.</p></div>
       </section>
 
       <section id="tools">

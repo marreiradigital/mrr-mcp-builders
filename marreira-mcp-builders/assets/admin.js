@@ -1193,7 +1193,27 @@
 				( clients === undefined ? '<p class="mmcb-hint">Carregando…</p>' : clientsTable( clients ) ) +
 			'</section>';
 
-		return '<div class="mmcb-grid cols-2">' + connectCard + clientsCard + '</div>';
+		var troubleshootCard =
+			'<section class="mmcb-card mmcb-span-2">' +
+				'<h2>Não conecta? Provavelmente é o firewall / CDN</h2>' +
+				'<p class="mmcb-hint">Erros como <strong>“Não foi possível registrar no serviço de login”</strong> quase nunca são do plugin: são do <strong>Cloudflare, WAF ou plugin de segurança</strong> do site bloqueando as requisições que o servidor do Claude.ai / ChatGPT faz.</p>' +
+				'<p class="mmcb-hint">O conector faz 3 chamadas <em>de servidor</em> (não de navegador) ao seu site: <strong>registrar o app → pegar o token → usar as ferramentas</strong>. Elas chegam com “cara de robô” (User-Agent de biblioteca, ex.: <code class="mmcb-mono">python-httpx</code>) e o Bot Fight Mode / WAF costuma barrá-las <em>antes</em> de chegarem aqui — por isso a conexão falha mesmo com tudo certo no plugin.</p>' +
+				'<h3 style="font-size:14px;margin:14px 0 6px">Libere estas rotas no seu firewall / CDN</h3>' +
+				'<div class="mmcb-copy-row"><code class="mmcb-code" id="mmcb-fw-paths">/wp-json/marreira-mcp/*\n/marreira-mcp-oauth/*\n/.well-known/oauth-*</code>' +
+				'<button class="mmcb-btn mmcb-btn-sm mmcb-copy" data-copy="#mmcb-fw-paths">Copiar</button></div>' +
+				'<div class="mmcb-danger-zone" style="border-color:var(--stroke);background:var(--surface-2);margin-top:14px">' +
+					'<h3 style="color:var(--text)">No Cloudflare</h3>' +
+					'<ul class="mmcb-hint" style="line-height:1.8;margin:0 0 4px;padding-left:18px">' +
+						'<li><strong>Security → Bots:</strong> desligue o <strong>Bot Fight Mode</strong> (ou libere essas rotas no Super Bot Fight Mode).</li>' +
+						'<li><strong>Security → WAF → Custom rules:</strong> crie uma regra com ação <strong>“Skip”</strong> (pular Managed Rules, Rate Limiting e Bot Fight) quando o caminho contiver <code class="mmcb-mono">/wp-json/marreira-mcp/</code>, <code class="mmcb-mono">/marreira-mcp-oauth/</code> ou começar com <code class="mmcb-mono">/.well-known/oauth</code>.</li>' +
+						'<li><strong>Rate Limiting:</strong> isente essas rotas — o conector faz várias chamadas.</li>' +
+					'</ul>' +
+				'</div>' +
+				'<p class="mmcb-hint" style="margin-top:12px"><strong>No host:</strong> se você usa <strong>Wordfence, Imunify360, BitNinja ou mod_security</strong>, coloque as mesmas rotas na allowlist (um erro <code class="mmcb-mono">520</code> costuma ser a origem derrubando a requisição).</p>' +
+				'<p class="mmcb-hint" style="margin-top:8px">Como confirmar: a aba <strong>Logs</strong> registra as falhas de OAuth (<code class="mmcb-mono">oauth:register_failed</code> etc.). Se você tenta conectar e <em>nada</em> aparece lá, o pedido nem chegou ao plugin — é o firewall/CDN.</p>' +
+			'</section>';
+
+		return '<div class="mmcb-grid cols-2">' + connectCard + clientsCard + troubleshootCard + '</div>';
 	}
 
 	function viewFor( tab, logsData ) {

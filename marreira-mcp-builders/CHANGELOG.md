@@ -17,6 +17,21 @@ lote — que é o que se lê para decidir se atualiza.
 
 ---
 
+## [Unreleased]
+
+### Adicionado
+
+- **Guia "Não conecta? É o firewall / CDN" na aba Conectores e no site.** A causa
+  mais comum de o conector Claude.ai/ChatGPT não conectar não é o plugin — é o
+  Cloudflare/WAF/segurança do host bloqueando as requisições de servidor da
+  Anthropic/OpenAI (User-Agent de biblioteca) antes de chegarem ao PHP. O painel
+  (aba Conectores) e a documentação pública agora explicam o sintoma
+  (registro dá 201 no navegador mas 520/403 com o UA do provedor), as rotas para
+  liberar (`/wp-json/marreira-mcp/*`, `/marreira-mcp-oauth/*`, `/.well-known/oauth-*`),
+  os passos no Cloudflare (Bot Fight Mode, regra WAF "Skip", Rate Limiting) e no
+  host (Wordfence/Imunify360/mod_security), e como confirmar pelos eventos
+  `oauth:*_failed` da aba Logs.
+
 ## [1.8.1] - 2026-07-20
 
 ### Corrigido
