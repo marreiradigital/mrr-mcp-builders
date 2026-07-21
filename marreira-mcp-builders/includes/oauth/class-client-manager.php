@@ -24,11 +24,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Client_Manager {
 
 	/**
-	 * Maximo de registros por IP na janela.
+	 * Maximo de registros por IP na janela (1h). O Claude.ai/ChatGPT registra um
+	 * client NOVO a cada tentativa de conexao (DCR), e o usuario costuma repetir a
+	 * conexao algumas vezes ate acertar — 5/h estourava e travava com
+	 * "temporarily_unavailable". 20/h continua barrando abuso em massa.
 	 *
 	 * @var int
 	 */
-	const REG_RATE_MAX = 5;
+	const REG_RATE_MAX = 20;
 
 	/**
 	 * Maximo de redirect_uris por client.
@@ -48,6 +51,7 @@ class Client_Manager {
 
 		$count = (int) get_transient( $key );
 		if ( $count >= self::REG_RATE_MAX ) {
+			self::log_register_fail( $ip, 429, 'rate_limit: ' . $count . ' registros na janela de 1h' );
 			return array(
 				'status' => 429,
 				'body'   => array(
@@ -61,20 +65,24 @@ class Client_Manager {
 		$raw  = file_get_contents( 'php://input' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		$data = json_decode( (string) $raw, true );
 		if ( ! is_array( $data ) ) {
+			self::log_register_fail( $ip, 400, 'corpo JSON invalido (' . strlen( (string) $raw ) . ' bytes)' );
 			return self::invalid_request( 'Corpo JSON invalido.' );
 		}
 
 		$redirect_uris = isset( $data['redirect_uris'] ) && is_array( $data['redirect_uris'] ) ? $data['redirect_uris'] : array();
 		if ( empty( $redirect_uris ) ) {
+			self::log_register_fail( $ip, 400, 'sem redirect_uris; chaves recebidas: ' . implode( ',', array_slice( array_keys( $data ), 0, 12 ) ) );
 			return self::invalid_request( 'redirect_uris e obrigatorio.' );
 		}
 		if ( count( $redirect_uris ) > self::MAX_REDIRECT_URIS ) {
+			self::log_register_fail( $ip, 400, 'redirect_uris em excesso: ' . count( $redirect_uris ) );
 			return self::invalid_request( 'Numero excessivo de redirect_uris.' );
 		}
 
 		$clean_uris = array();
 		foreach ( $redirect_uris as $uri ) {
 			if ( ! self::is_valid_redirect_uri( $uri ) ) {
+				self::log_register_fail( $ip, 400, 'redirect_uri invalido: ' . substr( is_scalar( $uri ) ? (string) $uri : wp_json_encode( $uri ), 0, 120 ) );
 				return array(
 					'status' => 400,
 					'body'   => array(
@@ -271,6 +279,32 @@ class Client_Manager {
 		$table = Activator::table_oauth_clients();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE status = 'pending'" );
+	}
+
+	/**
+	 * Registra no audit log uma tentativa de registro OAuth que FALHOU.
+	 *
+	 * Antes so o registro bem-sucedido era logado; as falhas (429/400) saiam sem
+	 * rastro, e era justamente onde o conector do Claude.ai/ChatGPT podia estar
+	 * quebrando sem ninguem ver. Agora a falha fica no log para diagnostico.
+	 *
+	 * @param string $ip     IP de origem.
+	 * @param int    $status Status HTTP retornado.
+	 * @param string $reason Motivo legivel.
+	 * @return void
+	 */
+	private static function log_register_fail( $ip, $status, $reason ) {
+		Audit_Log::log(
+			array(
+				'method'           => 'POST',
+				'route'            => MMCB_OAUTH_BASE_PATH . '/register',
+				'action'           => 'oauth:register_failed',
+				'status_code'      => (int) $status,
+				'ip'               => $ip,
+				'response_summary' => 'DCR recusado (' . (int) $status . '): ' . $reason,
+				'success'          => false,
+			)
+		);
 	}
 
 	/**

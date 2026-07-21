@@ -493,7 +493,7 @@
 			'<li><strong>Você clica em “Autorizar”</strong>Conceda apenas os escopos que quiser — os sensíveis ficam bloqueados pela trava dupla das configurações.</li>' +
 			'<li><strong>O app volta a funcionar sozinho</strong>Ele recebe o token e passa a chamar as ferramentas do site. O cliente aparece na aba Conectores.</li>' +
 		'</ul>' +
-		'<p class="mmcb-hint">Mantenha esta aba aberta durante o processo. Se o app ficar “pendente de aprovação”, o próximo passo resolve.</p>' +
+		'<p class="mmcb-hint">Você precisa estar logado neste site como administrador quando a tela de autorização abrir (se não estiver, ele pede o login e volta). Autorizar já aprova o conector — não precisa aprovar nada à parte.</p>' +
 		'<div class="mmcb-wizard-actions">' +
 			'<button class="mmcb-btn" data-wz-go="oauth-url">← Voltar</button>' +
 			'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="oauth-approve">Entendi, próximo →</button>' +
@@ -507,7 +507,7 @@
 		if ( clients === undefined ) {
 			list = '<p class="mmcb-hint">Carregando clientes…</p>';
 		} else if ( ! clients.length ) {
-			list = '<p class="mmcb-hint">Nenhum cliente apareceu ainda. Termine de adicionar o conector no app de IA e clique em “Atualizar lista”.</p>';
+			list = '<p class="mmcb-hint">Nenhum conector conectou ainda. Depois de autorizar no app de IA, ele aparece aqui — clique em Atualizar lista.</p>';
 		} else {
 			list = '<ul class="mmcb-checklist">' + clients.map( function ( c ) {
 				var pend = c.status === 'pending';
@@ -520,7 +520,7 @@
 		}
 		return list +
 			'<div class="mmcb-actions" style="margin-top:12px"><button class="mmcb-btn mmcb-btn-sm" data-wz-clients-refresh="1">↻ Atualizar lista</button></div>' +
-			'<p class="mmcb-hint" style="margin-top:12px">Aprovar o registro não concede acesso sozinho — o acesso só nasce quando você autoriza os escopos na tela de consentimento.</p>' +
+			'<p class="mmcb-hint" style="margin-top:12px">Ao autorizar no seu site, o conector já fica aprovado automaticamente. Esta lista serve para conferir e, se precisar, revogar um conector. Um item “pendente” é um registro que começou mas não concluiu a autorização.</p>' +
 			'<div class="mmcb-wizard-actions">' +
 				'<button class="mmcb-btn" data-wz-go="oauth-consent">← Voltar</button>' +
 				'<button class="mmcb-btn mmcb-btn-primary" data-wz-go="oauth-done">Próximo →</button>' +

@@ -175,6 +175,22 @@ class Token_Endpoint {
 	 */
 	private static function error( $error, $desc ) {
 		$status = 'invalid_client' === $error ? 401 : 400;
+
+		// Loga a falha do /token: e o ultimo passo do OAuth e um ponto comum de
+		// quebra (PKCE, code expirado/ja usado, redirect_uri divergente). Sem log,
+		// a falha do conector do Claude.ai/ChatGPT ficava invisivel.
+		Audit_Log::log(
+			array(
+				'method'           => 'POST',
+				'route'            => MMCB_OAUTH_BASE_PATH . '/token',
+				'action'           => 'oauth:token_failed',
+				'status_code'      => $status,
+				'ip'               => Audit_Log::client_ip(),
+				'response_summary' => 'Token recusado (' . $error . '): ' . $desc,
+				'success'          => false,
+			)
+		);
+
 		return array(
 			'status' => $status,
 			'body'   => array(

@@ -29,7 +29,7 @@ class Metadata {
 		return array(
 			'builder', 'read', 'content',
 			'plugins', 'themes', 'core', 'files', 'snippets',
-			'db', 'db_query', 'exec', 'cli',
+			'options', 'db', 'db_query', 'exec', 'cli',
 		);
 	}
 

@@ -17,6 +17,39 @@ lote — que é o que se lê para decidir se atualiza.
 
 ---
 
+## [Unreleased]
+
+### Corrigido
+
+- **Conector OAuth (Claude.ai / ChatGPT): a primeira conexão deixava de falhar.**
+  Clientes nasciam `pending` e a tela de autorização recusava clientes pendentes
+  com uma página de erro — mas o Claude.ai registra e vai direto ao `/authorize`
+  no mesmo fluxo, então a primeira tentativa sempre esbarrava em "cliente não
+  aprovado" e a pessoa precisaria aprovar no painel e refazer tudo. Agora a
+  própria tela de consentimento **é** a aprovação: só um admin (`manage_options`)
+  logado chega nela, vendo nome do app, redirect e escopos — ao autorizar, o
+  cliente é aprovado no mesmo ato. Só clientes explicitamente **revogados** são
+  bloqueados.
+- **`options` faltava no discovery OAuth.** A ability `options` (1.8.0) não era
+  anunciada em `scopes_supported`, então um conector não conseguia pedir esse
+  escopo. Adicionada.
+
+### Adicionado
+
+- **Falhas de OAuth agora vão para o audit log.** Antes só o sucesso era
+  registrado; as falhas de registro (DCR 429/400), de `/authorize`
+  (response_type, PKCE, cliente desconhecido, redirect_uri fora da lista) e de
+  `/token` (PKCE, code expirado/usado) saíam sem rastro — justamente onde o
+  conector podia quebrar sem ninguém ver. Novas ações `oauth:register_failed`,
+  `oauth:authorize_failed` e `oauth:token_failed` com o motivo.
+
+### Alterado
+
+- **Rate-limit do registro OAuth (DCR) de 5 para 20 por hora por IP.** O
+  Claude.ai/ChatGPT registra um cliente novo a cada tentativa e o usuário costuma
+  repetir a conexão algumas vezes; 5/h estourava e travava com
+  `temporarily_unavailable`. 20/h continua barrando abuso em massa.
+
 ## [1.8.0] - 2026-07-16
 
 ### Adicionado

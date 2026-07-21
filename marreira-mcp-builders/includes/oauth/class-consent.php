@@ -67,8 +67,14 @@ class Consent {
 		if ( ! $client ) {
 			self::error_page( __( 'Cliente OAuth não encontrado.', 'marreira-mcp-builders' ) );
 		}
-		if ( 'approved' !== $client['status'] ) {
-			self::error_page( __( 'Este cliente ainda não foi aprovado pelo administrador. Aprove-o no painel do plugin e tente novamente.', 'marreira-mcp-builders' ) );
+		// Só bloqueia clientes REVOGADOS. Um cliente 'pending' segue para a tela de
+		// consentimento: o próprio ato de um admin (manage_options) autorizar aqui —
+		// vendo nome, redirect e escopos — É a aprovação. Exigir uma pré-aprovação
+		// separada no painel criava um beco sem saída, porque o Claude.ai/ChatGPT
+		// registra e vai direto ao /authorize no mesmo fluxo: o cliente ainda estava
+		// 'pending' e a primeira conexão sempre falhava.
+		if ( 'revoked' === $client['status'] ) {
+			self::error_page( __( 'Este cliente foi revogado pelo administrador. Remova-o no app de IA e conecte novamente para gerar um novo.', 'marreira-mcp-builders' ) );
 		}
 
 		// redirect_uri precisa bater EXATAMENTE com um dos registrados (anti open-redirect).
@@ -110,6 +116,13 @@ class Consent {
 				);
 				wp_redirect( add_query_arg( self::present( array( 'error' => 'access_denied', 'state' => $state ) ), $redirect_uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 				exit;
+			}
+
+			// O admin autorizou vendo o app: promove o cliente a 'approved' agora
+			// (se ainda estava pending). É o que faz a primeira conexão do
+			// Claude.ai/ChatGPT concluir sem o admin precisar pré-aprovar no painel.
+			if ( 'approved' !== $client['status'] ) {
+				Client_Manager::approve( (int) $client['id'], get_current_user_id() );
 			}
 
 			// Escopos marcados no formulario, limitados aos pedidos e concediveis.
@@ -317,6 +330,22 @@ class Consent {
 	 * @return void
 	 */
 	private static function error_page( $message ) {
+		// Loga a falha do /authorize antes de renderizar: e um dos pontos onde o
+		// conector do Claude.ai/ChatGPT pode quebrar (response_type, PKCE, cliente
+		// desconhecido, redirect_uri fora da lista). Sem isto, a falha nao deixava
+		// rastro no audit log.
+		Audit_Log::log(
+			array(
+				'method'           => isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) ) : 'GET',
+				'route'            => MMCB_OAUTH_BASE_PATH . '/authorize',
+				'action'           => 'oauth:authorize_failed',
+				'status_code'      => 400,
+				'ip'               => Audit_Log::client_ip(),
+				'response_summary' => 'Authorize recusado: ' . wp_strip_all_tags( (string) $message ),
+				'success'          => false,
+			)
+		);
+
 		status_header( 400 );
 		header( 'Content-Type: text/html; charset=utf-8' );
 		header( 'Cache-Control: no-store' );
