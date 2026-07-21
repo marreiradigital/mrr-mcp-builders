@@ -4,7 +4,7 @@ Tags: mcp, ai, bricks builder, elementor, page builder, rest api
 Requires at least: 6.4
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.8.0
+Stable tag: 1.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -176,6 +176,22 @@ log no painel. O primeiro acesso ao painel exige o aceite do Termo de Responsabi
 que fica registrado com usuário, data e versão do termo.
 
 == Changelog ==
+
+= 1.8.1 =
+* Correção: **conectar Claude.ai / ChatGPT como conector agora funciona na
+  primeira tentativa.** O cliente OAuth nascia "pendente" e a tela de autorização
+  recusava clientes pendentes — mas o app registra e vai direto para a
+  autorização no mesmo fluxo, então a primeira conexão sempre falhava com "cliente
+  não aprovado". Agora a própria tela de consentimento (só acessível a um
+  administrador logado, que vê o app, o redirect e os escopos) já aprova o cliente
+  ao autorizar. Apenas clientes revogados continuam bloqueados.
+* Correção: a permissão `options` (1.8.0) passou a ser anunciada no discovery
+  OAuth, para um conector poder solicitá-la.
+* Novo: falhas de OAuth (registro, autorização e token) agora vão para o audit
+  log, com o motivo — para diagnosticar conexões que não completam.
+* Alterado: o limite de registros OAuth por hora subiu de 5 para 20 por IP (o
+  app registra um cliente novo a cada tentativa, e 5/h travava reconexões
+  legítimas).
 
 = 1.8.0 =
 * Novo: **o CLI geral agora aparece como tools MCP.** Com o CLI ligado
@@ -399,6 +415,10 @@ Lote de correções vindas de uma auditoria completa do plugin.
 * Painel SPA com wizard de onboarding, gestão de múltiplos tokens, logs e catálogo.
 
 == Upgrade Notice ==
+
+= 1.8.1 =
+Corrige a conexão de conectores Claude.ai / ChatGPT, que falhava na primeira
+tentativa ("cliente não aprovado"). Recomendado para quem usa OAuth.
 
 = 1.8.0 =
 O CLI geral agora aparece como tools MCP (conectores Claude.ai/ChatGPT passam a
